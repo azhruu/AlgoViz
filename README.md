@@ -53,7 +53,7 @@ AlgoViz/
 
 ## Built in public
 
-This repository grows on a fixed schedule — **two commits a day** (00:00 & 12:00 PKT), one focused feature at a time. The commit history *is* the progress log.
+This repository is built in small, focused steps — one complete, tested feature at a time. The commit history *is* the progress log.
 
 ## License
 

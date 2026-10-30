@@ -1,6 +1,6 @@
 # AlgoViz — Build Roadmap
 
-Two focused commits a day (00:00 & 12:00 PKT). Each slot = one small, complete feature.
+One small, complete, tested feature per change. Checkboxes mark what is live.
 Tick items off as they land.
 
 ## Week 1 — Sorting core
