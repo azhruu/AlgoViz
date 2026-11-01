@@ -22,7 +22,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 
 | Area | Algorithms |
 |---|---|
-| Sorting | Bubble · Selection · Insertion |
+| Sorting | Bubble · Selection · Insertion · Merge |
 
 ## Roadmap
 

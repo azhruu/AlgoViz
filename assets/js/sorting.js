@@ -95,4 +95,51 @@ function insertionSort(input) {
   a[j+1] = key                   ← insert key into the gap` };
 }
 
-const SORTING = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort };
+function mergeSort(input) {
+  const a = input.slice(), frames = [];
+  let comparisons = 0, swaps = 0; // swaps counts merged writes back into the array
+  frames.push(baseFrame(a, {}));
+  function merge(lo, mid, hi) {
+    const left = a.slice(lo, mid + 1), right = a.slice(mid + 1, hi + 1);
+    let i = 0, j = 0, k = lo;
+    while (i < left.length && j < right.length) {
+      comparisons++;
+      frames.push(baseFrame(a, { compare: [lo + i, mid + 1 + j], line: 4, comparisons, swaps }));
+      if (left[i] <= right[j]) { a[k] = left[i]; i++; }
+      else { a[k] = right[j]; j++; }
+      swaps++;
+      frames.push(baseFrame(a, { swap: [k], line: 4, comparisons, swaps }));
+      k++;
+    }
+    while (i < left.length) {
+      a[k] = left[i]; i++;
+      swaps++;
+      frames.push(baseFrame(a, { swap: [k], line: 4, comparisons, swaps }));
+      k++;
+    }
+    while (j < right.length) {
+      a[k] = right[j]; j++;
+      swaps++;
+      frames.push(baseFrame(a, { swap: [k], line: 4, comparisons, swaps }));
+      k++;
+    }
+  }
+  function sort(lo, hi) {
+    if (lo >= hi) return;
+    const mid = Math.floor((lo + hi) / 2);
+    sort(lo, mid);
+    sort(mid + 1, hi);
+    merge(lo, mid, hi);
+  }
+  sort(0, a.length - 1);
+  frames.push(baseFrame(a, { done: a.map((_, i) => i), line: 5, comparisons, swaps }));
+  return { frames, complexity: "O(n log n)", pseudocode:
+`mergeSort(a, lo, hi)
+  if lo >= hi: return
+  mid = (lo + hi) / 2
+  mergeSort(a, lo, mid); mergeSort(a, mid+1, hi)
+  merge the two sorted halves     ← compare heads, write smaller
+array fully sorted` };
+}
+
+const SORTING = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort, merge: mergeSort };

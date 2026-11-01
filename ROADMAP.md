@@ -9,7 +9,7 @@ Tick items off as they land.
 - [x] Bubble sort visualizer (+ synced pseudocode)
 - [x] Selection sort visualizer
 - [x] Insertion sort visualizer
-- [ ] Merge sort visualizer
+- [x] Merge sort visualizer
 - [ ] Quick sort visualizer (pivot highlighting)
 - [ ] Heap sort visualizer
 - [ ] Sorting: "race mode" — two algorithms side by side
