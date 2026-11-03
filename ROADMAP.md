@@ -10,7 +10,7 @@ Tick items off as they land.
 - [x] Selection sort visualizer
 - [x] Insertion sort visualizer
 - [x] Merge sort visualizer
-- [ ] Quick sort visualizer (pivot highlighting)
+- [x] Quick sort visualizer (pivot highlighting)
 - [ ] Heap sort visualizer
 - [ ] Sorting: "race mode" — two algorithms side by side
 - [ ] Custom array input (type your own numbers)

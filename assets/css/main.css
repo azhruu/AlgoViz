@@ -1,7 +1,7 @@
 :root{
   --bg:#0b1020; --panel:#121a33; --panel2:#0e1530; --text:#e8ecf8;
   --muted:#93a0c2; --accent:#6c8cff; --accent2:#38e0c8; --danger:#ff5d7a;
-  --compare:#ffd166; --swap:#ff5d7a; --sorted:#38e0c8; --bar:#6c8cff;
+  --compare:#ffd166; --swap:#ff5d7a; --sorted:#38e0c8; --bar:#6c8cff; --pivot:#c084fc;
   --radius:14px;
 }
 *{box-sizing:border-box}
@@ -35,6 +35,7 @@ a:hover{text-decoration:underline}
 .bar{flex:1;background:var(--bar);border-radius:3px 3px 0 0;min-width:2px;transition:height .12s ease}
 .bar.compare{background:var(--compare)}
 .bar.swap{background:var(--swap)}
+.bar.pivot{background:var(--pivot)}
 .bar.sorted{background:var(--sorted)}
 
 .stats{display:flex;flex-wrap:wrap;gap:26px;margin-top:16px;color:var(--muted);font-size:14px}

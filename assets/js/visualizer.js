@@ -38,6 +38,7 @@ class Player {
       bar.style.height = (v / max * 100) + "%";
       if (frame.compare && frame.compare.includes(i)) bar.classList.add("compare");
       if (frame.swap && frame.swap.includes(i)) bar.classList.add("swap");
+      if (frame.pivot && frame.pivot.includes(i)) bar.classList.add("pivot");
       if (done.has(i)) bar.classList.add("sorted");
       this.stage.appendChild(bar);
     });

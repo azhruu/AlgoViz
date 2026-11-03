@@ -4,7 +4,7 @@
 
 function baseFrame(arr, extra) {
   return Object.assign(
-    { arr: arr.slice(), compare: null, swap: null, done: [], line: 0, comparisons: 0, swaps: 0 },
+    { arr: arr.slice(), compare: null, swap: null, pivot: null, done: [], line: 0, comparisons: 0, swaps: 0 },
     extra || {}
   );
 }
@@ -142,4 +142,56 @@ function mergeSort(input) {
 array fully sorted` };
 }
 
-const SORTING = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort, merge: mergeSort };
+function quickSort(input) {
+  const a = input.slice(), frames = [];
+  let comparisons = 0, swaps = 0;
+  const done = [];
+  frames.push(baseFrame(a, {}));
+  function partition(lo, hi) {
+    const pivot = a[hi];
+    frames.push(baseFrame(a, { pivot: [hi], done: done.slice(), line: 5, comparisons, swaps }));
+    let i = lo - 1;
+    for (let j = lo; j < hi; j++) {
+      comparisons++;
+      frames.push(baseFrame(a, { compare: [j], pivot: [hi], done: done.slice(), line: 7, comparisons, swaps }));
+      if (a[j] < pivot) {
+        i++;
+        if (i !== j) {
+          [a[i], a[j]] = [a[j], a[i]];
+          swaps++;
+          frames.push(baseFrame(a, { swap: [i, j], pivot: [hi], done: done.slice(), line: 8, comparisons, swaps }));
+        }
+      }
+    }
+    if (i + 1 !== hi) {
+      [a[i + 1], a[hi]] = [a[hi], a[i + 1]];
+      swaps++;
+    }
+    frames.push(baseFrame(a, { swap: [i + 1, hi], pivot: [i + 1], done: done.slice(), line: 9, comparisons, swaps }));
+    return i + 1;
+  }
+  function sort(lo, hi) {
+    if (lo >= hi) return;
+    const p = partition(lo, hi);
+    done.push(p);
+    frames.push(baseFrame(a, { done: done.slice(), line: 2, comparisons, swaps }));
+    sort(lo, p - 1);
+    sort(p + 1, hi);
+  }
+  sort(0, a.length - 1);
+  frames.push(baseFrame(a, { done: a.map((_, i) => i), line: 10, comparisons, swaps }));
+  return { frames, complexity: "O(n log n) avg", pseudocode:
+`quickSort(a, lo, hi)
+  if lo < hi
+    p = partition(a, lo, hi)   ← pivot = a[hi]
+    quickSort(a, lo, p-1); quickSort(a, p+1, hi)
+partition(a, lo, hi)
+  pivot = a[hi]; i = lo-1
+  for j = lo … hi-1
+    if a[j] < pivot
+      i++; swap a[i], a[j]
+  swap a[i+1], a[hi]; return i+1
+array fully sorted` };
+}
+
+const SORTING = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort, merge: mergeSort, quick: quickSort };

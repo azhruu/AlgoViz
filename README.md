@@ -4,7 +4,6 @@
 
 ![Status](https://img.shields.io/badge/status-actively%20building-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Commits](https://img.shields.io/badge/commits-2%C3%97%20daily-orange)
 
 ## Why this project
 
@@ -22,11 +21,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 
 | Area | Algorithms |
 |---|---|
-| Sorting | Bubble · Selection · Insertion · Merge |
+| Sorting | Bubble · Selection · Insertion · Merge · Quick |
 
 ## Roadmap
 
-Merge / Quick / Heap sort → Linear & Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Heap sort → Linear & Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
