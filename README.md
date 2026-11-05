@@ -21,11 +21,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 
 | Area | Algorithms |
 |---|---|
-| Sorting | Bubble · Selection · Insertion · Merge · Quick |
+| Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
 
 ## Roadmap
 
-Heap sort → Linear & Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Linear & Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 

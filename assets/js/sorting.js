@@ -194,4 +194,53 @@ partition(a, lo, hi)
 array fully sorted` };
 }
 
-const SORTING = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort, merge: mergeSort, quick: quickSort };
+function heapSort(input) {
+  const a = input.slice(), frames = [];
+  let comparisons = 0, swaps = 0;
+  const done = [];
+  frames.push(baseFrame(a, {}));
+  // Sift the element at i down until the heap property holds in a[0..end).
+  // line 1 = build-heap phase, line 4 = extraction phase.
+  function siftDown(i, end, line) {
+    while (true) {
+      const left = 2 * i + 1, right = left + 1;
+      let largest = i;
+      if (left < end) {
+        comparisons++;
+        frames.push(baseFrame(a, { compare: [largest, left], done: done.slice(), line, comparisons, swaps }));
+        if (a[left] > a[largest]) largest = left;
+      }
+      if (right < end) {
+        comparisons++;
+        frames.push(baseFrame(a, { compare: [largest, right], done: done.slice(), line, comparisons, swaps }));
+        if (a[right] > a[largest]) largest = right;
+      }
+      if (largest === i) break;
+      [a[i], a[largest]] = [a[largest], a[i]];
+      swaps++;
+      frames.push(baseFrame(a, { swap: [i, largest], done: done.slice(), line, comparisons, swaps }));
+      i = largest;
+    }
+  }
+  // Build a max-heap: heapify every parent, bottom-up.
+  for (let i = Math.floor(a.length / 2) - 1; i >= 0; i--) siftDown(i, a.length, 1);
+  // Repeatedly move the root (the max) to the end and restore the heap.
+  for (let end = a.length - 1; end > 0; end--) {
+    [a[0], a[end]] = [a[end], a[0]];
+    swaps++;
+    frames.push(baseFrame(a, { swap: [0, end], done: done.slice(), line: 3, comparisons, swaps }));
+    done.push(end);
+    siftDown(0, end, 4);
+  }
+  if (a.length) done.push(0);
+  frames.push(baseFrame(a, { done: done.slice(), line: 5, comparisons, swaps }));
+  return { frames, complexity: "O(n log n)", pseudocode:
+`buildMaxHeap(a)                  ← heapify every parent, bottom-up
+  siftDown(a, i, n)              ← largest child bubbles up
+for end = n-1 … 1
+  swap a[0], a[end]              ← root is the max, lock it in place
+  siftDown(a, 0, end)            ← restore the heap
+array fully sorted` };
+}
+
+const SORTING = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort, merge: mergeSort, quick: quickSort, heap: heapSort };
