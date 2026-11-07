@@ -12,7 +12,7 @@ Tick items off as they land.
 - [x] Merge sort visualizer
 - [x] Quick sort visualizer (pivot highlighting)
 - [x] Heap sort visualizer
-- [ ] Sorting: "race mode" — two algorithms side by side
+- [x] Sorting: "race mode" — two algorithms side by side
 - [ ] Custom array input (type your own numbers)
 - [ ] Sound-free step counter + best/average/worst case notes per algorithm
 

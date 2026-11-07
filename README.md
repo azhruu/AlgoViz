@@ -15,6 +15,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🎚️ **Controls** — array size and animation speed sliders, instant reshuffle
 - 📊 **Live stats** — comparisons, swaps/writes and complexity for each run
 - 📝 **Synced pseudocode** — the currently executing line is highlighted as the animation runs
+- 🏁 **Race mode** — run two sorting algorithms side by side on the same array and see which finishes first
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now

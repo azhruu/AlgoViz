@@ -14,6 +14,7 @@ class Player {
     this.speed = 55;                 // 1..100
     this.timer = null;
     this.onLine = () => {};
+    this.onFinish = () => {};         // called once when the last frame renders
   }
 
   load(frames, complexity) {
@@ -54,6 +55,7 @@ class Player {
       if (this.pos === this.frames.length - 1) {
         this.stats.status.textContent = "Sorted ✓";
         this.stop();
+        this.onFinish();
       }
       return true;
     }
