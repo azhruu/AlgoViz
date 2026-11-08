@@ -13,6 +13,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 
 - 🎬 **Frame-accurate playback** — play, pause and single-step through every comparison and swap
 - 🎚️ **Controls** — array size and animation speed sliders, instant reshuffle
+- ⌨️ **Custom array input** — type your own numbers (comma or space separated) and visualize any array you like, with validation and clear error messages
 - 📊 **Live stats** — comparisons, swaps/writes and complexity for each run
 - 📝 **Synced pseudocode** — the currently executing line is highlighted as the animation runs
 - 🏁 **Race mode** — run two sorting algorithms side by side on the same array and see which finishes first

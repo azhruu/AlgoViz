@@ -31,6 +31,10 @@ a:hover{text-decoration:underline}
 .controls button:hover{border-color:var(--accent)}
 .controls button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 .controls input[type=range]{accent-color:var(--accent);width:130px}
+.controls input[type=text]{background:var(--panel2);color:var(--text);border:1px solid #26336b;border-radius:9px;padding:9px 13px;font-size:14px;width:230px}
+.controls input[type=text]:focus{outline:none;border-color:var(--accent)}
+.controls .custom-array{flex:1 1 260px}
+.custom-error{margin-top:14px;padding:10px 14px;border:1px solid var(--danger);border-radius:10px;background:rgba(255,93,122,.08);color:var(--danger);font-weight:700;font-size:14px}
 .controls .race-toggle{flex-direction:row;align-items:center;gap:8px;justify-content:center;padding-bottom:9px;color:var(--text);font-weight:700;cursor:pointer;white-space:nowrap}
 .controls .race-toggle input{accent-color:var(--accent2);width:16px;height:16px;cursor:pointer}
 

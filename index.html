@@ -54,6 +54,10 @@
     </label>
     <label class="race-toggle"><input type="checkbox" id="raceToggle"> 🏁 Race mode</label>
     <label>Array size <input type="range" id="sizeRange" min="10" max="120" value="48"></label>
+    <label class="custom-array">Custom array
+      <input type="text" id="customArrayInput" placeholder="e.g. 42, 7, 19, 3, 88" spellcheck="false">
+    </label>
+    <button id="applyArrayBtn">Apply array</button>
     <label>Speed <input type="range" id="speedRange" min="1" max="100" value="55"></label>
     <button id="shuffleBtn">Shuffle</button>
     <button id="playBtn" class="primary">▶ Play</button>
@@ -72,6 +76,7 @@
   </div>
 
   <div id="raceResult" class="race-result" hidden></div>
+  <div id="customError" class="custom-error" hidden></div>
 
   <div class="stats">
     <div>Comparisons <strong id="statComparisons">0</strong></div>

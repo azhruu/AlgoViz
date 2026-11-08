@@ -24,6 +24,41 @@ let pseudoLines = [];
 let pseudoLinesB = [];
 let raceMode = false;
 let raceDeclared = false;
+/* Set by "Apply array"; null means a fresh random array each build. */
+let customArray = null;
+const MAX_CUSTOM_SIZE = 120;
+const MAX_CUSTOM_VALUE = 999;
+
+/* Parse a comma/space-separated list of whole numbers.
+   Returns { values } on success, or { error } with a plain message. */
+function parseCustomArray(text) {
+  const parts = text.split(/[\s,;]+/).filter((p) => p.length > 0);
+  if (parts.length < 2)
+    return { error: "Enter at least 2 numbers, e.g. 42, 7, 19, 3, 88." };
+  if (parts.length > MAX_CUSTOM_SIZE)
+    return { error: `At most ${MAX_CUSTOM_SIZE} numbers — you entered ${parts.length}.` };
+  const values = [];
+  for (const part of parts) {
+    if (!/^-?\d+$/.test(part))
+      return { error: `"${part}" is not a whole number.` };
+    const n = parseInt(part, 10);
+    if (n < 0 || n > MAX_CUSTOM_VALUE)
+      return { error: `Numbers must be between 0 and ${MAX_CUSTOM_VALUE} — got ${n}.` };
+    values.push(n);
+  }
+  return { values };
+}
+
+function showCustomError(message) {
+  const el = $("customError");
+  el.textContent = message;
+  el.hidden = false;
+}
+
+function clearCustomError() {
+  $("customError").hidden = true;
+  $("customError").textContent = "";
+}
 
 player.onLine = (line) => {
   $("pseudocode").innerHTML = pseudoLines
@@ -81,7 +116,9 @@ playerB.onFinish = declareWinner;
 
 function build() {
   const size = parseInt($("sizeRange").value, 10);
-  const arr = randomArray(size);   // one shared array: a fair race
+  // A custom array overrides the size slider until it is cleared
+  // (shuffle, or moving the size slider, goes back to random arrays).
+  const arr = customArray || randomArray(size);   // one shared array: a fair race
   const algo = $("algoSelect").value;
   const { frames, complexity, pseudocode } = SORTING[algo](arr);
   pseudoLines = pseudocode.split("\n");
@@ -111,8 +148,28 @@ function build() {
 
 $("algoSelect").addEventListener("change", build);
 $("algoSelectB").addEventListener("change", build);
-$("sizeRange").addEventListener("input", build);
-$("shuffleBtn").addEventListener("click", build);
+$("sizeRange").addEventListener("input", () => {
+  customArray = null;              // back to random arrays
+  $("customArrayInput").value = "";
+  clearCustomError();
+  build();
+});
+$("shuffleBtn").addEventListener("click", () => {
+  customArray = null;
+  $("customArrayInput").value = "";
+  clearCustomError();
+  build();
+});
+$("applyArrayBtn").addEventListener("click", () => {
+  const { values, error } = parseCustomArray($("customArrayInput").value);
+  if (error) {
+    showCustomError(error);
+    return;
+  }
+  customArray = values;
+  clearCustomError();
+  build();
+});
 $("speedRange").addEventListener("input", (e) => {
   player.speed = parseInt(e.target.value, 10);
   playerB.speed = player.speed;
