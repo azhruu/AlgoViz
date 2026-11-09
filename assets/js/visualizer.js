@@ -7,7 +7,7 @@
 class Player {
   constructor(stageEl, stats) {
     this.stage = stageEl;
-    this.stats = stats;              // {comparisons, swaps, complexity, status} elements
+    this.stats = stats;              // {steps, comparisons, swaps, complexity, status} elements
     this.frames = [];
     this.pos = -1;
     this.playing = false;
@@ -45,6 +45,9 @@ class Player {
     });
     this.stats.comparisons.textContent = frame.comparisons;
     this.stats.swaps.textContent = frame.swaps;
+    // Step counter: "0 / N" before the first step, "N / N" when sorted.
+    if (this.stats.steps)
+      this.stats.steps.textContent = (this.pos + 1) + " / " + this.frames.length;
     this.onLine(frame.line);
   }
 

@@ -15,25 +15,38 @@ function bubbleSort(input) {
   const done = [];
   frames.push(baseFrame(a, {}));
   for (let end = a.length - 1; end > 0; end--) {
+    let swapped = false;
     for (let i = 0; i < end; i++) {
       comparisons++;
       frames.push(baseFrame(a, { compare: [i, i + 1], done: done.slice(), line: 2, comparisons, swaps }));
       if (a[i] > a[i + 1]) {
         [a[i], a[i + 1]] = [a[i + 1], a[i]];
         swaps++;
+        swapped = true;
         frames.push(baseFrame(a, { swap: [i, i + 1], done: done.slice(), line: 3, comparisons, swaps }));
       }
     }
     done.push(end);
+    // A whole pass with no swap means the rest is already sorted.
+    if (!swapped) {
+      for (let i = 0; i < end; i++) done.push(i);
+      break;
+    }
   }
   done.push(0);
   frames.push(baseFrame(a, { done: done.slice(), line: 5, comparisons, swaps }));
-  return { frames, complexity: "O(n²)", pseudocode:
+  return { frames, complexity: "O(n²)", cases: {
+    best: "O(n) — one pass, no swaps (early exit)",
+    average: "O(n²)",
+    worst: "O(n²) — reverse-sorted input",
+    note: "Adaptive: nearly-sorted input finishes in a single pass; swaps are at most O(n²).",
+  }, pseudocode:
 `for end = n-1 … 1
   for i = 0 … end-1
     if a[i] > a[i+1]        ← compare
       swap a[i], a[i+1]     ← swap
-  last element is locked in place` };
+  last element is locked in place
+  no swap in a whole pass → stop early (already sorted)` };
 }
 
 function selectionSort(input) {
@@ -57,7 +70,12 @@ function selectionSort(input) {
   }
   done.push(a.length - 1);
   frames.push(baseFrame(a, { done: done.slice(), line: 6, comparisons, swaps }));
-  return { frames, complexity: "O(n²)", pseudocode:
+  return { frames, complexity: "O(n²)", cases: {
+    best: "O(n²) — the whole unsorted part is scanned every pass",
+    average: "O(n²)",
+    worst: "O(n²)",
+    note: "Input order never helps, but it swaps at most once per pass (O(n) swaps total).",
+  }, pseudocode:
 `for i = 0 … n-2
   min = i
   for j = i+1 … n-1
@@ -86,7 +104,12 @@ function insertionSort(input) {
     frames.push(baseFrame(a, { done: done.slice(), line: 5, comparisons, swaps }));
   }
   frames.push(baseFrame(a, { done: a.map((_, i) => i), line: 6, comparisons, swaps }));
-  return { frames, complexity: "O(n²)", pseudocode:
+  return { frames, complexity: "O(n²)", cases: {
+    best: "O(n) — already sorted, one comparison per element",
+    average: "O(n²)",
+    worst: "O(n²) — reverse-sorted input",
+    note: "Adaptive and stable: excellent for nearly-sorted data, poor for shuffled input.",
+  }, pseudocode:
 `for i = 1 … n-1
   key = a[i]
   j = i - 1
@@ -133,7 +156,12 @@ function mergeSort(input) {
   }
   sort(0, a.length - 1);
   frames.push(baseFrame(a, { done: a.map((_, i) => i), line: 5, comparisons, swaps }));
-  return { frames, complexity: "O(n log n)", pseudocode:
+  return { frames, complexity: "O(n log n)", cases: {
+    best: "O(n log n)",
+    average: "O(n log n)",
+    worst: "O(n log n)",
+    note: "Always the same cost whatever the input; stable, but needs O(n) extra space for the merge.",
+  }, pseudocode:
 `mergeSort(a, lo, hi)
   if lo >= hi: return
   mid = (lo + hi) / 2
@@ -180,7 +208,12 @@ function quickSort(input) {
   }
   sort(0, a.length - 1);
   frames.push(baseFrame(a, { done: a.map((_, i) => i), line: 10, comparisons, swaps }));
-  return { frames, complexity: "O(n log n) avg", pseudocode:
+  return { frames, complexity: "O(n log n) avg", cases: {
+    best: "O(n log n) — pivot splits the array evenly",
+    average: "O(n log n)",
+    worst: "O(n²) — already-sorted input (pivot is the last element)",
+    note: "Fast in practice, but pivot choice matters: sorted input is its worst case with a last-element pivot.",
+  }, pseudocode:
 `quickSort(a, lo, hi)
   if lo < hi
     p = partition(a, lo, hi)   ← pivot = a[hi]
@@ -234,7 +267,12 @@ function heapSort(input) {
   }
   if (a.length) done.push(0);
   frames.push(baseFrame(a, { done: done.slice(), line: 5, comparisons, swaps }));
-  return { frames, complexity: "O(n log n)", pseudocode:
+  return { frames, complexity: "O(n log n)", cases: {
+    best: "O(n log n)",
+    average: "O(n log n)",
+    worst: "O(n log n)",
+    note: "Guaranteed O(n log n) in place with O(1) extra space; not stable, and usually slower than quick sort in practice.",
+  }, pseudocode:
 `buildMaxHeap(a)                  ← heapify every parent, bottom-up
   siftDown(a, i, n)              ← largest child bubbles up
 for end = n-1 … 1

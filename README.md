@@ -14,7 +14,8 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🎬 **Frame-accurate playback** — play, pause and single-step through every comparison and swap
 - 🎚️ **Controls** — array size and animation speed sliders, instant reshuffle
 - ⌨️ **Custom array input** — type your own numbers (comma or space separated) and visualize any array you like, with validation and clear error messages
-- 📊 **Live stats** — comparisons, swaps/writes and complexity for each run
+- 📊 **Live stats** — step counter (Step X / Y), comparisons, swaps/writes and complexity for each run
+- 📈 **Best / average / worst case notes** — the selected algorithm's complexity in each case, plus a one-line note on when it shines
 - 📝 **Synced pseudocode** — the currently executing line is highlighted as the animation runs
 - 🏁 **Race mode** — run two sorting algorithms side by side on the same array and see which finishes first
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser

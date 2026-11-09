@@ -8,12 +8,14 @@ const ALGO_NAMES = {
 };
 
 const player = new Player($("stage"), {
+  steps: $("statStep"),
   comparisons: $("statComparisons"),
   swaps: $("statSwaps"),
   complexity: $("statComplexity"),
   status: $("statStatus"),
 });
 const playerB = new Player($("stageB"), {
+  steps: $("statStepB"),
   comparisons: $("statComparisonsB"),
   swaps: $("statSwapsB"),
   complexity: $("statComplexityB"),
@@ -114,18 +116,38 @@ function declareWinner() {
 player.onFinish = declareWinner;
 playerB.onFinish = declareWinner;
 
+/* Render the best / average / worst case notes for one algorithm. */
+function renderCaseNotes(el, cases) {
+  el.innerHTML = "";
+  [["Best", cases.best], ["Average", cases.average], ["Worst", cases.worst]]
+    .forEach(([label, text]) => {
+      const row = document.createElement("div");
+      const tag = document.createElement("span");
+      tag.textContent = label;
+      const value = document.createElement("strong");
+      value.textContent = text;
+      row.append(tag, value);
+      el.appendChild(row);
+    });
+  const note = document.createElement("p");
+  note.className = "case-note";
+  note.textContent = cases.note;
+  el.appendChild(note);
+}
+
 function build() {
   const size = parseInt($("sizeRange").value, 10);
   // A custom array overrides the size slider until it is cleared
   // (shuffle, or moving the size slider, goes back to random arrays).
   const arr = customArray || randomArray(size);   // one shared array: a fair race
   const algo = $("algoSelect").value;
-  const { frames, complexity, pseudocode } = SORTING[algo](arr);
+  const { frames, complexity, pseudocode, cases } = SORTING[algo](arr);
   pseudoLines = pseudocode.split("\n");
   player.speed = parseInt($("speedRange").value, 10);
   player.load(frames, complexity);
   $("pseudocode").textContent = pseudocode;
   $("stageLabelA").textContent = ALGO_NAMES[algo];
+  renderCaseNotes($("caseNotes"), cases);
 
   raceDeclared = false;
   $("raceResult").hidden = true;
@@ -141,6 +163,7 @@ function build() {
     playerB.load(resB.frames, resB.complexity);
     $("pseudocodeB").textContent = resB.pseudocode;
     $("stageLabelB").textContent = ALGO_NAMES[algoB];
+    renderCaseNotes($("caseNotesB"), resB.cases);
   } else {
     playerB.stop();
   }
@@ -179,6 +202,7 @@ $("raceToggle").addEventListener("change", (e) => {
   $("algoBLabel").hidden = !raceMode;
   $("stageWrapB").hidden = !raceMode;
   $("statsB").hidden = !raceMode;
+  $("caseNotesB").hidden = !raceMode;
   $("pseudocodeB").hidden = !raceMode;
   document.body.classList.toggle("racing", raceMode);
   build();

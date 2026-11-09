@@ -14,7 +14,7 @@ Tick items off as they land.
 - [x] Heap sort visualizer
 - [x] Sorting: "race mode" — two algorithms side by side
 - [x] Custom array input (type your own numbers)
-- [ ] Sound-free step counter + best/average/worst case notes per algorithm
+- [x] Sound-free step counter + best/average/worst case notes per algorithm
 
 ## Week 2 — Searching & linear structures
 - [ ] Linear search visualizer
