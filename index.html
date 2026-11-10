@@ -38,7 +38,13 @@
           <option value="quick">Quick Sort</option>
           <option value="heap">Heap Sort</option>
         </optgroup>
+        <optgroup label="Searching">
+          <option value="linear">Linear Search</option>
+        </optgroup>
       </select>
+    </label>
+    <label id="targetLabel" hidden>Target
+      <input type="number" id="targetInput" min="0" max="999" step="1" placeholder="e.g. 42">
     </label>
     <label id="algoBLabel" hidden>Algorithm B
       <select id="algoSelectB">
@@ -104,7 +110,7 @@
   <h2>What&rsquo;s inside</h2>
   <div class="grid">
     <div class="card"><h3>Sorting</h3><p>Bubble, selection, insertion, merge, quick, heap and more — with bar animations and swap tracking.</p><span class="tag live">Live</span></div>
-    <div class="card"><h3>Searching</h3><p>Linear and binary search visualized element by element.</p><span class="tag soon">In roadmap</span></div>
+    <div class="card"><h3>Searching</h3><p>Linear search live — watch the scan check each element until it finds the target. Binary search coming next.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Trees</h3><p>BST, AVL rotations and traversals drawn as real node graphs.</p><span class="tag soon">In roadmap</span></div>
     <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS, DFS, Dijkstra and A* on an interactive grid.</p><span class="tag soon">In roadmap</span></div>
     <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures.</p><span class="tag soon">In roadmap</span></div>
@@ -124,6 +130,7 @@
 
 <script src="assets/js/visualizer.js"></script>
 <script src="assets/js/sorting.js"></script>
+<script src="assets/js/searching.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

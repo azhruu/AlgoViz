@@ -5,6 +5,7 @@ const $ = (id) => document.getElementById(id);
 const ALGO_NAMES = {
   bubble: "Bubble Sort", selection: "Selection Sort", insertion: "Insertion Sort",
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
+  linear: "Linear Search",
 };
 
 const player = new Player($("stage"), {
@@ -28,6 +29,9 @@ let raceMode = false;
 let raceDeclared = false;
 /* Set by "Apply array"; null means a fresh random array each build. */
 let customArray = null;
+/* Search target typed by the user; null means auto-pick a value from the
+   array (so the demo usually finds something) on each build. */
+let targetOverride = null;
 const MAX_CUSTOM_SIZE = 120;
 const MAX_CUSTOM_VALUE = 999;
 
@@ -141,6 +145,51 @@ function build() {
   // (shuffle, or moving the size slider, goes back to random arrays).
   const arr = customArray || randomArray(size);   // one shared array: a fair race
   const algo = $("algoSelect").value;
+
+  // Searching runs on one stage only: race mode is a sorting feature.
+  const isSearch = Object.prototype.hasOwnProperty.call(SEARCHING, algo);
+  if (isSearch && raceMode) {
+    raceMode = false;
+    $("raceToggle").checked = false;
+  }
+  $("targetLabel").hidden = !isSearch;
+  $("raceToggle").closest("label").hidden = isSearch;
+  document.body.classList.toggle("racing", raceMode);
+  if (!raceMode) {
+    $("algoBLabel").hidden = true;
+    $("stageWrapB").hidden = true;
+    $("statsB").hidden = true;
+    $("caseNotesB").hidden = true;
+    $("pseudocodeB").hidden = true;
+  }
+
+  if (isSearch) {
+    // No typed target: pick a random element so the demo usually finds it.
+    let target = targetOverride;
+    if (target === null) {
+      target = arr[Math.floor(Math.random() * arr.length)];
+      $("targetInput").value = target;
+    }
+    const { frames, complexity, pseudocode, cases, foundIndex } = SEARCHING[algo](arr, target);
+    pseudoLines = pseudocode.split("\n");
+    player.speed = parseInt($("speedRange").value, 10);
+    player.endStatus = foundIndex === -1
+      ? `Not found — ${target} is not in the array`
+      : `Found ✓ — ${target} at index ${foundIndex}`;
+    player.load(frames, complexity);
+    $("pseudocode").textContent = pseudocode;
+    $("stageLabelA").textContent = `${ALGO_NAMES[algo]} — target ${target}`;
+    renderCaseNotes($("caseNotes"), cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    playerB.stop();
+    return;
+  }
+
+  player.endStatus = null;
   const { frames, complexity, pseudocode, cases } = SORTING[algo](arr);
   pseudoLines = pseudocode.split("\n");
   player.speed = parseInt($("speedRange").value, 10);
@@ -192,6 +241,11 @@ $("applyArrayBtn").addEventListener("click", () => {
   customArray = values;
   clearCustomError();
   build();
+});
+$("targetInput").addEventListener("change", (e) => {
+  const n = parseInt(e.target.value, 10);
+  targetOverride = Number.isInteger(n) && n >= 0 && n <= MAX_CUSTOM_VALUE ? n : null;
+  if (Object.prototype.hasOwnProperty.call(SEARCHING, $("algoSelect").value)) build();
 });
 $("speedRange").addEventListener("input", (e) => {
   player.speed = parseInt(e.target.value, 10);

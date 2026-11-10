@@ -17,7 +17,7 @@ Tick items off as they land.
 - [x] Sound-free step counter + best/average/worst case notes per algorithm
 
 ## Week 2 — Searching & linear structures
-- [ ] Linear search visualizer
+- [x] Linear search visualizer
 - [ ] Binary search visualizer (mid-pointer focus)
 - [ ] Stack visualizer (push / pop / peek animations)
 - [ ] Queue visualizer (enqueue / dequeue)

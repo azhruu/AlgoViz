@@ -15,6 +15,7 @@ class Player {
     this.timer = null;
     this.onLine = () => {};
     this.onFinish = () => {};         // called once when the last frame renders
+    this.endStatus = null;            // overrides "Sorted ✓" (e.g. search results)
   }
 
   load(frames, complexity) {
@@ -40,6 +41,7 @@ class Player {
       if (frame.compare && frame.compare.includes(i)) bar.classList.add("compare");
       if (frame.swap && frame.swap.includes(i)) bar.classList.add("swap");
       if (frame.pivot && frame.pivot.includes(i)) bar.classList.add("pivot");
+      if (frame.found && frame.found.includes(i)) bar.classList.add("found");
       if (done.has(i)) bar.classList.add("sorted");
       this.stage.appendChild(bar);
     });
@@ -56,7 +58,7 @@ class Player {
       this.pos++;
       this.render(this.frames[this.pos]);
       if (this.pos === this.frames.length - 1) {
-        this.stats.status.textContent = "Sorted ✓";
+        this.stats.status.textContent = this.endStatus || "Sorted ✓";
         this.stop();
         this.onFinish();
       }

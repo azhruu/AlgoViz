@@ -18,6 +18,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 📈 **Best / average / worst case notes** — the selected algorithm's complexity in each case, plus a one-line note on when it shines
 - 📝 **Synced pseudocode** — the currently executing line is highlighted as the animation runs
 - 🏁 **Race mode** — run two sorting algorithms side by side on the same array and see which finishes first
+- 🔍 **Linear search visualizer** — watch the scan check each element in turn, with a target picker (type your own, or one is auto-picked from the array) and a clear found / not-found result
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -25,10 +26,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 | Area | Algorithms |
 |---|---|
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
+| Searching | Linear |
 
 ## Roadmap
 
-Linear & Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
@@ -48,6 +50,7 @@ AlgoViz/
 │   └── js/
 │       ├── visualizer.js # playback engine (frames, play/pause/step)
 │       ├── sorting.js    # sorting algorithm frame-generators
+│       ├── searching.js  # searching algorithm frame-generators
 │       └── app.js        # UI wiring
 ├── ROADMAP.md            # day-by-day build plan
 └── LICENSE               # MIT
