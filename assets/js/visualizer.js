@@ -1,6 +1,7 @@
 /* AlgoViz — core playback engine.
    Algorithms precompute a list of frames; the player renders and steps through them.
-   Frame: { arr, compare:[i,j]|null, swap:[i,j]|null, done:[indices], line,
+   Frame: { arr, compare:[i,j]|null, swap:[i,j]|null, pivot:[i]|null,
+            found:[i]|null, range:[lo,hi]|null, done:[indices], line,
             comparisons, swaps }                                            */
 "use strict";
 
@@ -42,6 +43,8 @@ class Player {
       if (frame.swap && frame.swap.includes(i)) bar.classList.add("swap");
       if (frame.pivot && frame.pivot.includes(i)) bar.classList.add("pivot");
       if (frame.found && frame.found.includes(i)) bar.classList.add("found");
+      // Search window: bars outside [lo, hi] are already ruled out.
+      if (frame.range && (i < frame.range[0] || i > frame.range[1])) bar.classList.add("out");
       if (done.has(i)) bar.classList.add("sorted");
       this.stage.appendChild(bar);
     });

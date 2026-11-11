@@ -53,6 +53,7 @@ body.racing .stages{grid-template-columns:1fr 1fr}
 .bar.swap{background:var(--swap)}
 .bar.pivot{background:var(--pivot)}
 .bar.sorted{background:var(--sorted)}
+.bar.out{opacity:.22}
 .bar.found{background:var(--sorted);box-shadow:0 0 14px rgba(56,224,200,.9)}
 
 .stats{display:flex;flex-wrap:wrap;gap:26px;margin-top:16px;color:var(--muted);font-size:14px}

@@ -19,6 +19,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 📝 **Synced pseudocode** — the currently executing line is highlighted as the animation runs
 - 🏁 **Race mode** — run two sorting algorithms side by side on the same array and see which finishes first
 - 🔍 **Linear search visualizer** — watch the scan check each element in turn, with a target picker (type your own, or one is auto-picked from the array) and a clear found / not-found result
+- 🎯 **Binary search visualizer** — the array is sorted first, then a purple mid-pointer halves the live search window each step while ruled-out bars dim, with best / average / worst case notes
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -26,11 +27,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 | Area | Algorithms |
 |---|---|
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
-| Searching | Linear |
+| Searching | Linear · Binary |
 
 ## Roadmap
 
-Binary search → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Binary search ✓ → Stack & Queue → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 

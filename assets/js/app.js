@@ -5,7 +5,7 @@ const $ = (id) => document.getElementById(id);
 const ALGO_NAMES = {
   bubble: "Bubble Sort", selection: "Selection Sort", insertion: "Insertion Sort",
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
-  linear: "Linear Search",
+  linear: "Linear Search", binary: "Binary Search",
 };
 
 const player = new Player($("stage"), {
@@ -178,7 +178,8 @@ function build() {
       : `Found ✓ — ${target} at index ${foundIndex}`;
     player.load(frames, complexity);
     $("pseudocode").textContent = pseudocode;
-    $("stageLabelA").textContent = `${ALGO_NAMES[algo]} — target ${target}`;
+    $("stageLabelA").textContent = `${ALGO_NAMES[algo]} — target ${target}`
+      + (algo === "binary" ? " · array sorted first" : "");
     renderCaseNotes($("caseNotes"), cases);
     raceDeclared = false;
     $("raceResult").hidden = true;
