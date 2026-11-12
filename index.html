@@ -42,6 +42,9 @@
           <option value="linear">Linear Search</option>
           <option value="binary">Binary Search</option>
         </optgroup>
+        <optgroup label="Data Structures">
+          <option value="stack">Stack</option>
+        </optgroup>
       </select>
     </label>
     <label id="targetLabel" hidden>Target
@@ -60,18 +63,18 @@
       </select>
     </label>
     <label class="race-toggle"><input type="checkbox" id="raceToggle"> 🏁 Race mode</label>
-    <label>Array size <input type="range" id="sizeRange" min="10" max="120" value="48"></label>
-    <label class="custom-array">Custom array
+    <label id="sizeLabel">Array size <input type="range" id="sizeRange" min="10" max="120" value="48"></label>
+    <label class="custom-array" id="customLabel">Custom array
       <input type="text" id="customArrayInput" placeholder="e.g. 42, 7, 19, 3, 88" spellcheck="false">
     </label>
     <button id="applyArrayBtn">Apply array</button>
-    <label>Speed <input type="range" id="speedRange" min="1" max="100" value="55"></label>
+    <label id="speedLabel">Speed <input type="range" id="speedRange" min="1" max="100" value="55"></label>
     <button id="shuffleBtn">Shuffle</button>
     <button id="playBtn" class="primary">▶ Play</button>
     <button id="stepBtn">Step</button>
   </div>
 
-  <div class="stages">
+  <div class="stages" id="stagesWrap">
     <div class="stage-wrap" id="stageWrapA">
       <div class="stage-label" id="stageLabelA">Bubble Sort</div>
       <div id="stage" class="stage"></div>
@@ -82,10 +85,31 @@
     </div>
   </div>
 
+  <div id="stackPanel" class="stack-panel" hidden>
+    <div class="controls">
+      <label>Value
+        <input type="number" id="stackValueInput" min="0" max="999" step="1" value="42">
+      </label>
+      <button id="pushBtn" class="primary">Push ↓</button>
+      <button id="popBtn">Pop ↑</button>
+      <button id="peekBtn">Peek</button>
+      <button id="demoStackBtn">▶ Demo</button>
+      <button id="clearStackBtn">Clear</button>
+    </div>
+    <div class="stack-area">
+      <div id="stackStage" class="stack-stage"></div>
+      <div class="stack-side">
+        <div class="stack-stats">Size <strong id="stackSize">0</strong> · Top <strong id="stackTop">—</strong> · Operations <strong id="stackOps">0</strong></div>
+        <div id="stackStatus" class="stack-status">Stack is empty — push a value to start.</div>
+        <ol id="stackLog" class="stack-log"></ol>
+      </div>
+    </div>
+  </div>
+
   <div id="raceResult" class="race-result" hidden></div>
   <div id="customError" class="custom-error" hidden></div>
 
-  <div class="stats">
+  <div class="stats" id="statsA">
     <div>Step <strong id="statStep">0 / 0</strong></div>
     <div>Comparisons <strong id="statComparisons">0</strong></div>
     <div>Swaps / Writes <strong id="statSwaps">0</strong></div>
@@ -132,6 +156,7 @@
 <script src="assets/js/visualizer.js"></script>
 <script src="assets/js/sorting.js"></script>
 <script src="assets/js/searching.js"></script>
+<script src="assets/js/structures.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

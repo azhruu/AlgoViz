@@ -19,7 +19,7 @@ Tick items off as they land.
 ## Week 2 — Searching & linear structures
 - [x] Linear search visualizer
 - [x] Binary search visualizer (mid-pointer focus)
-- [ ] Stack visualizer (push / pop / peek animations)
+- [x] Stack visualizer (push / pop / peek animations)
 - [ ] Queue visualizer (enqueue / dequeue)
 - [ ] Linked list visualizer (nodes + pointer arrows, insert/delete)
 - [ ] Doubly linked list traversal animation

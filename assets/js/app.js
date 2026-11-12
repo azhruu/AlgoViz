@@ -6,6 +6,7 @@ const ALGO_NAMES = {
   bubble: "Bubble Sort", selection: "Selection Sort", insertion: "Insertion Sort",
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
   linear: "Linear Search", binary: "Binary Search",
+  stack: "Stack",
 };
 
 const player = new Player($("stage"), {
@@ -22,6 +23,9 @@ const playerB = new Player($("stageB"), {
   complexity: $("statComplexityB"),
   status: $("statStatusB"),
 });
+
+/* Interactive stack panel (structures.js); reset on each build into it. */
+const stackViz = initStackViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -147,20 +151,47 @@ function build() {
   const algo = $("algoSelect").value;
 
   // Searching runs on one stage only: race mode is a sorting feature.
+  // The stack is interactive, not a playback: it has its own panel.
   const isSearch = Object.prototype.hasOwnProperty.call(SEARCHING, algo);
-  if (isSearch && raceMode) {
+  const isStack = algo === "stack";
+  if ((isSearch || isStack) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
   }
   $("targetLabel").hidden = !isSearch;
-  $("raceToggle").closest("label").hidden = isSearch;
+  $("raceToggle").closest("label").hidden = isSearch || isStack;
   document.body.classList.toggle("racing", raceMode);
+  $("stackPanel").hidden = !isStack;
+  $("stagesWrap").hidden = isStack;
+  $("statsA").hidden = isStack;
+  $("sizeLabel").hidden = isStack;
+  $("customLabel").hidden = isStack;
+  $("applyArrayBtn").hidden = isStack;
+  $("shuffleBtn").hidden = isStack;
+  $("speedLabel").hidden = isStack;
+  $("playBtn").hidden = isStack;
+  $("stepBtn").hidden = isStack;
   if (!raceMode) {
     $("algoBLabel").hidden = true;
     $("stageWrapB").hidden = true;
     $("statsB").hidden = true;
     $("caseNotesB").hidden = true;
     $("pseudocodeB").hidden = true;
+  }
+
+  if (isStack) {
+    pseudoLines = STACK_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = STACK_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), STACK_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    stackViz.reset();
+    return;
   }
 
   if (isSearch) {

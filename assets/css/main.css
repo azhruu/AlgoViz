@@ -78,8 +78,33 @@ body.racing .stages{grid-template-columns:1fr 1fr}
 
 footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 
+/* Stack visualizer — a vertical column of boxes, bottom-up, with the
+   top box highlighted. Push slides a box in from above, pop slides it
+   back out, peek flashes the top box gold. */
+.stack-panel{margin-top:20px}
+.stack-area{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start;margin-top:16px}
+.stack-stage{display:flex;flex-direction:column-reverse;gap:6px;min-height:320px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px}
+.stack-box{background:var(--bar);border-radius:8px;padding:10px 14px;text-align:center;font-weight:700;font-size:18px}
+.stack-box.top{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#06121a;position:relative}
+.stack-box.top::after{content:"TOP";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;letter-spacing:1px;font-weight:800;opacity:.75}
+.stack-box.entering{animation:stackIn .25s ease}
+.stack-box.leaving{animation:stackOut .25s ease forwards}
+.stack-box.peek{box-shadow:0 0 0 2px var(--compare),0 0 16px rgba(255,209,102,.7)}
+@keyframes stackIn{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes stackOut{to{opacity:0;transform:translateY(-18px)}}
+.stack-empty{color:var(--muted);text-align:center;padding:20px 0}
+.stack-side{padding-top:4px}
+.stack-stats{color:var(--muted);font-size:14px}
+.stack-stats strong{color:var(--text);margin-left:6px}
+.stack-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.stack-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.stack-log li::before{content:"▸ ";color:var(--accent2)}
+.controls button:disabled{opacity:.45;cursor:default}
+.controls button:disabled:hover{border-color:#26336b}
+
 @media (max-width:640px){
   .stage{height:230px}
   body.racing .stages{grid-template-columns:1fr}
   .nav nav a{margin-left:12px;font-size:14px}
+  .stack-area{grid-template-columns:1fr}
 }
