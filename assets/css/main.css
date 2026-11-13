@@ -108,3 +108,26 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
   .nav nav a{margin-left:12px;font-size:14px}
   .stack-area{grid-template-columns:1fr}
 }
+
+/* Queue visualizer — a horizontal row of boxes, front on the left and
+   rear on the right. Enqueue slides a box in from the right, dequeue
+   slides the front box out to the left, peek flashes the front box gold. */
+.queue-panel{margin-top:20px}
+.queue-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.queue-stage{display:flex;flex-wrap:wrap;gap:8px;min-height:120px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:28px 14px;align-items:center}
+.queue-box{background:var(--bar);border-radius:8px;padding:10px 0;text-align:center;font-weight:700;font-size:18px;min-width:64px;position:relative}
+.queue-box.front{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#06121a}
+.queue-box.front::before{content:"FRONT";position:absolute;left:50%;top:-20px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent2)}
+.queue-box.rear::after{content:"REAR";position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent)}
+.queue-box.entering{animation:queueIn .25s ease}
+.queue-box.leaving{animation:queueOut .25s ease forwards}
+.queue-box.peek{box-shadow:0 0 0 2px var(--compare),0 0 16px rgba(255,209,102,.7)}
+@keyframes queueIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+@keyframes queueOut{to{opacity:0;transform:translateX(-18px)}}
+.queue-empty{color:var(--muted);text-align:center;padding:20px 0;width:100%}
+.queue-side{padding-top:4px}
+.queue-stats{color:var(--muted);font-size:14px}
+.queue-stats strong{color:var(--text);margin-left:6px}
+.queue-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.queue-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.queue-log li::before{content:"▸ ";color:var(--accent2)}

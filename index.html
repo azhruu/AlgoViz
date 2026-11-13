@@ -44,6 +44,7 @@
         </optgroup>
         <optgroup label="Data Structures">
           <option value="stack">Stack</option>
+          <option value="queue">Queue</option>
         </optgroup>
       </select>
     </label>
@@ -102,6 +103,27 @@
         <div class="stack-stats">Size <strong id="stackSize">0</strong> · Top <strong id="stackTop">—</strong> · Operations <strong id="stackOps">0</strong></div>
         <div id="stackStatus" class="stack-status">Stack is empty — push a value to start.</div>
         <ol id="stackLog" class="stack-log"></ol>
+      </div>
+    </div>
+  </div>
+
+  <div id="queuePanel" class="queue-panel" hidden>
+    <div class="controls">
+      <label>Value
+        <input type="number" id="queueValueInput" min="0" max="999" step="1" value="42">
+      </label>
+      <button id="enqueueBtn" class="primary">Enqueue →</button>
+      <button id="dequeueBtn">← Dequeue</button>
+      <button id="peekQueueBtn">Peek</button>
+      <button id="demoQueueBtn">▶ Demo</button>
+      <button id="clearQueueBtn">Clear</button>
+    </div>
+    <div class="queue-area">
+      <div id="queueStage" class="queue-stage"></div>
+      <div class="queue-side">
+        <div class="queue-stats">Size <strong id="queueSize">0</strong> · Front <strong id="queueFront">—</strong> · Rear <strong id="queueRear">—</strong> · Operations <strong id="queueOps">0</strong></div>
+        <div id="queueStatus" class="queue-status">Queue is empty — enqueue a value to start.</div>
+        <ol id="queueLog" class="queue-log"></ol>
       </div>
     </div>
   </div>

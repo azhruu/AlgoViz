@@ -20,7 +20,7 @@ Tick items off as they land.
 - [x] Linear search visualizer
 - [x] Binary search visualizer (mid-pointer focus)
 - [x] Stack visualizer (push / pop / peek animations)
-- [ ] Queue visualizer (enqueue / dequeue)
+- [x] Queue visualizer (enqueue / dequeue)
 - [ ] Linked list visualizer (nodes + pointer arrows, insert/delete)
 - [ ] Doubly linked list traversal animation
 

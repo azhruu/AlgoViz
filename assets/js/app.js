@@ -6,7 +6,7 @@ const ALGO_NAMES = {
   bubble: "Bubble Sort", selection: "Selection Sort", insertion: "Insertion Sort",
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
   linear: "Linear Search", binary: "Binary Search",
-  stack: "Stack",
+  stack: "Stack", queue: "Queue",
 };
 
 const player = new Player($("stage"), {
@@ -24,8 +24,10 @@ const playerB = new Player($("stageB"), {
   status: $("statStatusB"),
 });
 
-/* Interactive stack panel (structures.js); reset on each build into it. */
+/* Interactive stack and queue panels (structures.js); reset on each
+   build into them. */
 const stackViz = initStackViz();
+const queueViz = initQueueViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -151,26 +153,30 @@ function build() {
   const algo = $("algoSelect").value;
 
   // Searching runs on one stage only: race mode is a sorting feature.
-  // The stack is interactive, not a playback: it has its own panel.
+  // The stack and queue are interactive, not playback: each has its
+  // own panel.
   const isSearch = Object.prototype.hasOwnProperty.call(SEARCHING, algo);
   const isStack = algo === "stack";
-  if ((isSearch || isStack) && raceMode) {
+  const isQueue = algo === "queue";
+  const isStructure = isStack || isQueue;
+  if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
   }
   $("targetLabel").hidden = !isSearch;
-  $("raceToggle").closest("label").hidden = isSearch || isStack;
+  $("raceToggle").closest("label").hidden = isSearch || isStructure;
   document.body.classList.toggle("racing", raceMode);
   $("stackPanel").hidden = !isStack;
-  $("stagesWrap").hidden = isStack;
-  $("statsA").hidden = isStack;
-  $("sizeLabel").hidden = isStack;
-  $("customLabel").hidden = isStack;
-  $("applyArrayBtn").hidden = isStack;
-  $("shuffleBtn").hidden = isStack;
-  $("speedLabel").hidden = isStack;
-  $("playBtn").hidden = isStack;
-  $("stepBtn").hidden = isStack;
+  $("queuePanel").hidden = !isQueue;
+  $("stagesWrap").hidden = isStructure;
+  $("statsA").hidden = isStructure;
+  $("sizeLabel").hidden = isStructure;
+  $("customLabel").hidden = isStructure;
+  $("applyArrayBtn").hidden = isStructure;
+  $("shuffleBtn").hidden = isStructure;
+  $("speedLabel").hidden = isStructure;
+  $("playBtn").hidden = isStructure;
+  $("stepBtn").hidden = isStructure;
   if (!raceMode) {
     $("algoBLabel").hidden = true;
     $("stageWrapB").hidden = true;
@@ -191,6 +197,21 @@ function build() {
     player.stop();
     playerB.stop();
     stackViz.reset();
+    return;
+  }
+
+  if (isQueue) {
+    pseudoLines = QUEUE_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = QUEUE_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), QUEUE_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    queueViz.reset();
     return;
   }
 
