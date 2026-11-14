@@ -21,7 +21,7 @@ Tick items off as they land.
 - [x] Binary search visualizer (mid-pointer focus)
 - [x] Stack visualizer (push / pop / peek animations)
 - [x] Queue visualizer (enqueue / dequeue)
-- [ ] Linked list visualizer (nodes + pointer arrows, insert/delete)
+- [x] Linked list visualizer (nodes + pointer arrows, insert/delete)
 - [ ] Doubly linked list traversal animation
 
 ## Week 3 — Trees & hashing

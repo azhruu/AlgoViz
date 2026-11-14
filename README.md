@@ -22,6 +22,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🎯 **Binary search visualizer** — the array is sorted first, then a purple mid-pointer halves the live search window each step while ruled-out bars dim, with best / average / worst case notes
 - 🥞 **Stack visualizer** — push, pop and peek on a live vertical stack with slide-in / slide-out animations, a top marker, an operation log and a scripted demo that pushes 10, 20, 30, peeks, then pops back to empty
 - 🚶 **Queue visualizer** — enqueue, dequeue and peek on a live horizontal queue with front / rear markers, slide-in / slide-out animations, an operation log and a scripted demo that enqueues 10, 20, 30, peeks, then dequeues back to empty
+- 🔗 **Linked list visualizer** — nodes joined by pointer arrows ending at NULL, with head / tail markers; insert at head, tail or any index, delete by value, search and reverse, an operation log and a scripted demo that builds 10 → 20 → 30, finds 20, adds 5 at the head, deletes 20 and reverses back to empty
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -30,11 +31,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 |---|---|
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
 | Searching | Linear · Binary |
-| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) |
+| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) |
 
 ## Roadmap
 
-Stack ✓ → Queue ✓ → Linked List → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Stack ✓ → Queue ✓ → Linked List ✓ → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
@@ -55,7 +56,7 @@ AlgoViz/
 │       ├── visualizer.js # playback engine (frames, play/pause/step)
 │       ├── sorting.js    # sorting algorithm frame-generators
 │       ├── searching.js  # searching algorithm frame-generators
-│       ├── structures.js # interactive structures (stack, queue)
+│       ├── structures.js # interactive structures (stack, queue, linked list)
 │       └── app.js        # UI wiring
 ├── ROADMAP.md            # day-by-day build plan
 └── LICENSE               # MIT

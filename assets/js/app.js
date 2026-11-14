@@ -6,7 +6,7 @@ const ALGO_NAMES = {
   bubble: "Bubble Sort", selection: "Selection Sort", insertion: "Insertion Sort",
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
   linear: "Linear Search", binary: "Binary Search",
-  stack: "Stack", queue: "Queue",
+  stack: "Stack", queue: "Queue", linkedlist: "Linked List",
 };
 
 const player = new Player($("stage"), {
@@ -28,6 +28,7 @@ const playerB = new Player($("stageB"), {
    build into them. */
 const stackViz = initStackViz();
 const queueViz = initQueueViz();
+const linkedListViz = initLinkedListViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -158,7 +159,8 @@ function build() {
   const isSearch = Object.prototype.hasOwnProperty.call(SEARCHING, algo);
   const isStack = algo === "stack";
   const isQueue = algo === "queue";
-  const isStructure = isStack || isQueue;
+  const isLinkedList = algo === "linkedlist";
+  const isStructure = isStack || isQueue || isLinkedList;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -168,6 +170,7 @@ function build() {
   document.body.classList.toggle("racing", raceMode);
   $("stackPanel").hidden = !isStack;
   $("queuePanel").hidden = !isQueue;
+  $("linkedListPanel").hidden = !isLinkedList;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -212,6 +215,21 @@ function build() {
     player.stop();
     playerB.stop();
     queueViz.reset();
+    return;
+  }
+
+  if (isLinkedList) {
+    pseudoLines = LINKED_LIST_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = LINKED_LIST_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), LINKED_LIST_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    linkedListViz.reset();
     return;
   }
 

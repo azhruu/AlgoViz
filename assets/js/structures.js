@@ -506,3 +506,371 @@ function initQueueViz() {
     log: $("queueLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Linked list visualizer — nodes joined by pointer arrows.           */
+/* Each node is a box; an arrow after it is its "next" pointer, and    */
+/* the chain ends at a NULL box. Insert and delete show where the      */
+/* pointers rewire: head, tail and index inserts, delete by value,     */
+/* search and reverse.                                                */
+/* ------------------------------------------------------------------ */
+
+const LINKED_LIST_INFO = {
+  complexity: "O(1) head · O(n) index",
+  cases: {
+    best: "O(1) — insert or delete at the head touches one pointer",
+    average: "O(n) — insert, delete or search by index walks half the list on average",
+    worst: "O(n) — an insert at the tail (no tail pointer) or a search for a missing value walks every node",
+    note: "Nodes are scattered in memory and joined by pointers — inserting in the middle only rewires two pointers, never shifts the rest. The price is no random access: reaching node i means walking i links from the head.",
+  },
+  pseudocode:
+`insertHead(value)     <- new node points at the head
+  node.next = head
+  head = node
+insertTail(value)     <- walk to the last node
+  last.next = node
+  node.next = null
+insertAt(i, value)    <- walk i - 1 links, rewire
+  prev.next = node
+  node.next = prev.next
+delete(value)         <- walk, rewire around it
+  prev.next = node.next
+search(value)         <- walk from the head
+  node = node.next until match
+reverse()             <- flip every pointer
+  prev, node = null, head`,
+};
+
+const LL_MAX_VALUE = 999;
+const LL_LOG_LIMIT = 8;
+/* Long enough for the slide animation to read, short enough to stay snappy. */
+const LL_ANIM_MS = 260;
+const LL_DEMO_STEP_MS = 550;
+const LL_FOUND_MS = 900;
+
+/* The scripted demo: build 10 -> 20 -> 30, find 20, add 5 at the head,
+   delete 20, reverse, then clear — ending empty so it replays cleanly. */
+const LL_DEMO_SCRIPT = [
+  { op: "insertTail", value: 10 }, { op: "insertTail", value: 20 },
+  { op: "insertTail", value: 30 },
+  { op: "search", value: 20 },
+  { op: "insertHead", value: 5 },
+  { op: "delete", value: 20 },
+  { op: "reverse" },
+  { op: "clear" },
+];
+
+/* els: { stage, valueInput, indexInput, insertHeadBtn, insertTailBtn,
+          insertAtBtn, deleteBtn, searchBtn, reverseBtn, demoBtn,
+          clearBtn, size, head, tail, ops, status, log } — plain DOM
+   elements. The factory keeps no other state, so a node test can drive
+   it with stub elements. */
+function createLinkedListViz(els) {
+  let items = [];
+  let ops = 0;
+  let animating = false;
+  let demoTimer = null;
+  let demoRunning = false;
+  /* Node boxes in list order, rebuilt by render(); used to animate the
+     exact node an operation touches. */
+  let nodeBoxes = [];
+
+  function render(enteringValue, enteringIndex) {
+    els.stage.innerHTML = "";
+    nodeBoxes = [];
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "ll-empty";
+      empty.textContent = "— empty —";
+      els.stage.appendChild(empty);
+    }
+    items.forEach((value, i) => {
+      const node = document.createElement("div");
+      node.className = "ll-node";
+      node.textContent = String(value);
+      if (i === 0) node.classList.add("head");
+      if (i === items.length - 1) node.classList.add("tail");
+      if (enteringValue !== undefined && enteringIndex === i)
+        node.classList.add("entering");
+      els.stage.appendChild(node);
+      nodeBoxes.push(node);
+      if (i < items.length - 1) {
+        const arrow = document.createElement("div");
+        arrow.className = "ll-arrow";
+        arrow.textContent = "→";
+        els.stage.appendChild(arrow);
+      }
+    });
+    if (items.length > 0) {
+      const tailArrow = document.createElement("div");
+      tailArrow.className = "ll-arrow";
+      tailArrow.textContent = "→";
+      els.stage.appendChild(tailArrow);
+      const nullBox = document.createElement("div");
+      nullBox.className = "ll-null";
+      nullBox.textContent = "NULL";
+      els.stage.appendChild(nullBox);
+    }
+    els.size.textContent = String(items.length);
+    els.head.textContent = items.length === 0 ? "—" : String(items[0]);
+    els.tail.textContent = items.length === 0 ? "—" : String(items[items.length - 1]);
+    els.ops.textContent = String(ops);
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > LL_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.insertHeadBtn, els.insertTailBtn, els.insertAtBtn, els.deleteBtn,
+     els.searchBtn, els.reverseBtn, els.demoBtn, els.clearBtn]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function validValue(value) {
+    return Number.isInteger(value) && value >= 0 && value <= LL_MAX_VALUE;
+  }
+
+  function insertHead(value) {
+    if (animating) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${LL_MAX_VALUE}.`);
+      return false;
+    }
+    items.unshift(value);
+    ops++;
+    render(value, 0);
+    setStatus(`Inserted ${value} at the head — head is now ${value}, size ${items.length}.`);
+    log(`insertHead ${value} -> [${items.join(" -> ")}]`);
+    return true;
+  }
+
+  function insertTail(value) {
+    if (animating) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${LL_MAX_VALUE}.`);
+      return false;
+    }
+    items.push(value);
+    ops++;
+    render(value, items.length - 1);
+    setStatus(`Inserted ${value} at the tail — tail is now ${value}, size ${items.length}.`);
+    log(`insertTail ${value} -> [${items.join(" -> ")}]`);
+    return true;
+  }
+
+  function insertAt(index, value) {
+    if (animating) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${LL_MAX_VALUE}.`);
+      return false;
+    }
+    if (!Number.isInteger(index) || index < 0 || index > items.length) {
+      setStatus(`Index must be between 0 and ${items.length} (size ${items.length}).`);
+      return false;
+    }
+    items.splice(index, 0, value);
+    ops++;
+    render(value, index);
+    setStatus(`Inserted ${value} at index ${index} — size ${items.length}.`);
+    log(`insertAt(${index}, ${value}) -> [${items.join(" -> ")}]`);
+    return true;
+  }
+
+  function deleteValue(value) {
+    if (animating) return null;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${LL_MAX_VALUE}.`);
+      return null;
+    }
+    const index = items.indexOf(value);
+    if (index === -1) {
+      setStatus(`${value} is not in the list — nothing to delete.`);
+      return null;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    const box = nodeBoxes[index];
+    if (box && box.classList) box.classList.add("leaving");
+    setTimeout(() => {
+      items.splice(index, 1);
+      ops++;
+      render();
+      setStatus(`Deleted ${value} at index ${index} — the neighbours are now linked directly`
+        + (items.length === 0 ? ", list is empty now." : `, size ${items.length}.`));
+      log(`delete ${value} -> [${items.join(" -> ")}]`);
+      animating = false;
+      setButtonsDisabled(false);
+    }, LL_ANIM_MS);
+    return value;
+  }
+
+  function search(value) {
+    if (animating) return -1;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${LL_MAX_VALUE}.`);
+      return -1;
+    }
+    ops++;
+    const index = items.indexOf(value);
+    render();
+    els.ops.textContent = String(ops);
+    if (index === -1) {
+      setStatus(`${value} is not in the list — walked all ${items.length} nodes.`);
+      log(`search ${value} -> not found (${items.length} nodes walked)`);
+      return -1;
+    }
+    const box = nodeBoxes[index];
+    if (box && box.classList) {
+      box.classList.add("found");
+      setTimeout(() => box.classList.remove("found"), LL_FOUND_MS);
+    }
+    setStatus(`Found ${value} at index ${index} — walked ${index + 1} node${index === 0 ? "" : "s"} from the head.`);
+    log(`search ${value} -> index ${index}`);
+    return index;
+  }
+
+  function reverse() {
+    if (animating) return false;
+    if (items.length < 2) {
+      setStatus(items.length === 0
+        ? "List is empty — nothing to reverse."
+        : "One node — reversing changes nothing.");
+      return false;
+    }
+    items.reverse();
+    ops++;
+    render();
+    setStatus(`Reversed — every pointer flipped, head is now ${items[0]}.`);
+    log(`reverse -> [${items.join(" -> ")}]`);
+    return true;
+  }
+
+  function clear() {
+    if (animating) return;
+    stopDemo();
+    items = [];
+    render();
+    setStatus("List cleared.");
+    log("clear -> list is empty");
+  }
+
+  function stopDemo() {
+    if (demoTimer !== null) {
+      clearTimeout(demoTimer);
+      demoTimer = null;
+    }
+    demoRunning = false;
+    els.demoBtn.disabled = false;
+  }
+
+  /* Runs the scripted story one step at a time. A delete needs its
+     slide-out to finish before the next step. */
+  function demo() {
+    if (demoRunning || animating) return false;
+    clear();
+    demoRunning = true;
+    els.demoBtn.disabled = true;
+    setStatus("Demo running — build 10 → 20 → 30, find 20, add 5 at the head, delete 20, reverse…");
+    let step = 0;
+    const runStep = () => {
+      if (step >= LL_DEMO_SCRIPT.length) {
+        stopDemo();
+        setStatus("Demo finished — the list is empty again. Insert your own values, or run it again.");
+        return;
+      }
+      const action = LL_DEMO_SCRIPT[step];
+      step++;
+      if (action.op === "insertHead") insertHead(action.value);
+      else if (action.op === "insertTail") insertTail(action.value);
+      else if (action.op === "insertAt") insertAt(action.index, action.value);
+      else if (action.op === "delete") deleteValue(action.value);
+      else if (action.op === "search") search(action.value);
+      else if (action.op === "reverse") reverse();
+      else if (action.op === "clear") clear();
+      /* A delete needs its slide-out to finish before the next step. */
+      const wait = action.op === "delete" ? LL_ANIM_MS + LL_DEMO_STEP_MS : LL_DEMO_STEP_MS;
+      demoTimer = setTimeout(runStep, wait);
+    };
+    demoTimer = setTimeout(runStep, LL_DEMO_STEP_MS);
+    return true;
+  }
+
+  function reset() {
+    stopDemo();
+    items = [];
+    ops = 0;
+    animating = false;
+    setButtonsDisabled(false);
+    render();
+    els.log.innerHTML = "";
+    setStatus("List is empty — insert a value to start.");
+  }
+
+  function readValueInput() {
+    const n = parseInt(els.valueInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  function readIndexInput() {
+    const n = parseInt(els.indexInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  els.insertHeadBtn.addEventListener("click", () => insertHead(readValueInput()));
+  els.insertTailBtn.addEventListener("click", () => insertTail(readValueInput()));
+  els.insertAtBtn.addEventListener("click", () => insertAt(readIndexInput(), readValueInput()));
+  els.deleteBtn.addEventListener("click", () => deleteValue(readValueInput()));
+  els.searchBtn.addEventListener("click", () => search(readValueInput()));
+  els.reverseBtn.addEventListener("click", () => reverse());
+  els.demoBtn.addEventListener("click", () => demo());
+  els.clearBtn.addEventListener("click", () => clear());
+  els.valueInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") insertTail(readValueInput());
+  });
+
+  render();
+  setStatus("List is empty — insert a value to start.");
+  return {
+    insertHead, insertTail, insertAt, deleteValue, search, reverse,
+    clear, demo, reset, stopDemo,
+    get size() { return items.length; },
+    get head() { return items.length === 0 ? null : items[0]; },
+    get tail() { return items.length === 0 ? null : items[items.length - 1]; },
+    get operations() { return ops; },
+    get items() { return items.slice(); },
+    get demoRunning() { return demoRunning; },
+  };
+}
+
+/* Wires the linked list panel in index.html; called once from app.js. */
+function initLinkedListViz() {
+  const $ = (id) => document.getElementById(id);
+  return createLinkedListViz({
+    stage: $("llStage"),
+    valueInput: $("llValueInput"),
+    indexInput: $("llIndexInput"),
+    insertHeadBtn: $("insertHeadBtn"),
+    insertTailBtn: $("insertTailBtn"),
+    insertAtBtn: $("insertAtBtn"),
+    deleteBtn: $("deleteLlBtn"),
+    searchBtn: $("searchLlBtn"),
+    reverseBtn: $("reverseLlBtn"),
+    demoBtn: $("demoLlBtn"),
+    clearBtn: $("clearLlBtn"),
+    size: $("llSize"),
+    head: $("llHead"),
+    tail: $("llTail"),
+    ops: $("llOps"),
+    status: $("llStatus"),
+    log: $("llLog"),
+  });
+}

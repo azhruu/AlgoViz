@@ -45,6 +45,7 @@
         <optgroup label="Data Structures">
           <option value="stack">Stack</option>
           <option value="queue">Queue</option>
+          <option value="linkedlist">Linked List</option>
         </optgroup>
       </select>
     </label>
@@ -128,6 +129,33 @@
     </div>
   </div>
 
+  <div id="linkedListPanel" class="ll-panel" hidden>
+    <div class="controls">
+      <label>Value
+        <input type="number" id="llValueInput" min="0" max="999" step="1" value="42">
+      </label>
+      <label>Index
+        <input type="number" id="llIndexInput" min="0" step="1" value="0">
+      </label>
+      <button id="insertHeadBtn" class="primary">Insert head</button>
+      <button id="insertTailBtn">Insert tail</button>
+      <button id="insertAtBtn">Insert at index</button>
+      <button id="deleteLlBtn">Delete value</button>
+      <button id="searchLlBtn">Search</button>
+      <button id="reverseLlBtn">Reverse</button>
+      <button id="demoLlBtn">▶ Demo</button>
+      <button id="clearLlBtn">Clear</button>
+    </div>
+    <div class="ll-area">
+      <div id="llStage" class="ll-stage"></div>
+      <div class="ll-side">
+        <div class="ll-stats">Size <strong id="llSize">0</strong> · Head <strong id="llHead">—</strong> · Tail <strong id="llTail">—</strong> · Operations <strong id="llOps">0</strong></div>
+        <div id="llStatus" class="ll-status">List is empty — insert a value to start.</div>
+        <ol id="llLog" class="ll-log"></ol>
+      </div>
+    </div>
+  </div>
+
   <div id="raceResult" class="race-result" hidden></div>
   <div id="customError" class="custom-error" hidden></div>
 
@@ -160,7 +188,7 @@
     <div class="card"><h3>Searching</h3><p>Linear and binary search live — watch the scan check each element, or the mid-pointer halve the search window until it finds the target.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Trees</h3><p>BST, AVL rotations and traversals drawn as real node graphs.</p><span class="tag soon">In roadmap</span></div>
     <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS, DFS, Dijkstra and A* on an interactive grid.</p><span class="tag soon">In roadmap</span></div>
-    <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures.</p><span class="tag soon">In roadmap</span></div>
+    <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures — a linked list with head, tail and NULL pointers, plus live stack and queue panels.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Hashing</h3><p>Hash functions, collisions and chaining — made visible.</p><span class="tag soon">In roadmap</span></div>
   </div>
 </section>
