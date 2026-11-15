@@ -874,3 +874,460 @@ function initLinkedListViz() {
     log: $("llLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Doubly linked list visualizer — the linked list with a second      */
+/* pointer per node. Each node has a prev (←) and a next (→) link,    */
+/* so the chain runs both ways: NULL ← node ↔ node ↔ node → NULL.     */
+/* The headline feature is traversal: walk the list forward from      */
+/* the head or backward from the tail, one node at a time, with the    */
+/* current node lit up and visited nodes marked. Insert, delete,      */
+/* search and reverse work the same as the singly linked list, but    */
+/* every operation rewires two pointers instead of one.               */
+/* ------------------------------------------------------------------ */
+
+const DOUBLY_LINKED_LIST_INFO = {
+  complexity: "O(1) head/tail · O(n) index",
+  cases: {
+    best: "O(1) — insert or delete at the head or tail touches two pointers",
+    average: "O(n) — insert, delete or search by index walks half the list on average",
+    worst: "O(n) — a search for a missing value walks every node, forward or backward",
+    note: "Every node carries a prev and a next pointer, so the list can be walked in both directions and a node can be deleted knowing only the node itself — no walk back to the head. The price is one extra pointer per node and two rewires per insert or delete. Traversal is O(n) either way: forward from the head, backward from the tail.",
+  },
+  pseudocode:
+`insertHead(value)     <- new node points both ways
+  node.next = head
+  node.prev = null
+  head.prev = node
+  head = node
+insertTail(value)     <- new node points both ways
+  node.prev = tail
+  node.next = null
+  tail.next = node
+  tail = node
+delete(node)          <- rewire both neighbours
+  node.prev.next = node.next
+  node.next.prev = node.prev
+traverseForward()     <- follow next from the head
+  node = head
+  while node != null: visit node; node = node.next
+traverseBackward()    <- follow prev from the tail
+  node = tail
+  while node != null: visit node; node = node.prev`,
+};
+
+const DLL_MAX_VALUE = 999;
+const DLL_LOG_LIMIT = 8;
+/* Long enough for the slide animation to read, short enough to stay snappy. */
+const DLL_ANIM_MS = 260;
+const DLL_DEMO_STEP_MS = 550;
+const DLL_FOUND_MS = 900;
+/* Pause on each node during a traversal, so the walk reads step by step. */
+const DLL_TRAVERSE_STEP_MS = 650;
+
+/* The scripted demo: build 10 -> 20 -> 30, walk it forward and back,
+   find 20, add 5 at the head, delete 20, reverse, then clear — ending
+   empty so it replays cleanly. */
+const DLL_DEMO_SCRIPT = [
+  { op: "insertTail", value: 10 }, { op: "insertTail", value: 20 },
+  { op: "insertTail", value: 30 },
+  { op: "traverse", direction: "forward" },
+  { op: "traverse", direction: "backward" },
+  { op: "search", value: 20 },
+  { op: "insertHead", value: 5 },
+  { op: "delete", value: 20 },
+  { op: "reverse" },
+  { op: "clear" },
+];
+
+/* els: { stage, valueInput, indexInput, insertHeadBtn, insertTailBtn,
+          insertAtBtn, deleteBtn, searchBtn, reverseBtn,
+          traverseForwardBtn, traverseBackwardBtn, demoBtn, clearBtn,
+          size, head, tail, ops, status, log } — plain DOM elements.
+   The factory keeps no other state, so a node test can drive it with
+   stub elements. */
+function createDoublyLinkedListViz(els) {
+  let items = [];
+  let ops = 0;
+  let animating = false;
+  let demoTimer = null;
+  let demoRunning = false;
+  let traverseTimer = null;
+  let traversing = false;
+  /* Node boxes in list order, rebuilt by render(); used to animate the
+     exact node an operation touches. */
+  let nodeBoxes = [];
+
+  function render(enteringValue, enteringIndex) {
+    els.stage.innerHTML = "";
+    nodeBoxes = [];
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "dll-empty";
+      empty.textContent = "— empty —";
+      els.stage.appendChild(empty);
+    } else {
+      /* The head's prev pointer comes from NULL, the tail's next
+         pointer goes to NULL, and neighbours are joined by ↔ — the
+         two-way link is what makes this list doubly linked. */
+      const headNull = document.createElement("div");
+      headNull.className = "dll-null";
+      headNull.textContent = "NULL";
+      els.stage.appendChild(headNull);
+      const prevArrow = document.createElement("div");
+      prevArrow.className = "dll-arrow";
+      prevArrow.textContent = "←";
+      els.stage.appendChild(prevArrow);
+      items.forEach((value, i) => {
+        const node = document.createElement("div");
+        node.className = "dll-node";
+        node.textContent = String(value);
+        if (i === 0) node.classList.add("head");
+        if (i === items.length - 1) node.classList.add("tail");
+        if (enteringValue !== undefined && enteringIndex === i)
+          node.classList.add("entering");
+        els.stage.appendChild(node);
+        nodeBoxes.push(node);
+        const arrow = document.createElement("div");
+        arrow.className = "dll-arrow";
+        arrow.textContent = i < items.length - 1 ? "↔" : "→";
+        els.stage.appendChild(arrow);
+      });
+      const tailNull = document.createElement("div");
+      tailNull.className = "dll-null";
+      tailNull.textContent = "NULL";
+      els.stage.appendChild(tailNull);
+    }
+    els.size.textContent = String(items.length);
+    els.head.textContent = items.length === 0 ? "—" : String(items[0]);
+    els.tail.textContent = items.length === 0 ? "—" : String(items[items.length - 1]);
+    els.ops.textContent = String(ops);
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > DLL_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.insertHeadBtn, els.insertTailBtn, els.insertAtBtn, els.deleteBtn,
+     els.searchBtn, els.reverseBtn, els.traverseForwardBtn,
+     els.traverseBackwardBtn, els.demoBtn, els.clearBtn]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function validValue(value) {
+    return Number.isInteger(value) && value >= 0 && value <= DLL_MAX_VALUE;
+  }
+
+  function insertHead(value) {
+    if (animating || traversing) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${DLL_MAX_VALUE}.`);
+      return false;
+    }
+    items.unshift(value);
+    ops++;
+    render(value, 0);
+    setStatus(`Inserted ${value} at the head — its next points at the old head, head is now ${value}, size ${items.length}.`);
+    log(`insertHead ${value} -> [${items.join(" <-> ")}]`);
+    return true;
+  }
+
+  function insertTail(value) {
+    if (animating || traversing) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${DLL_MAX_VALUE}.`);
+      return false;
+    }
+    items.push(value);
+    ops++;
+    render(value, items.length - 1);
+    setStatus(`Inserted ${value} at the tail — its prev points at the old tail, tail is now ${value}, size ${items.length}.`);
+    log(`insertTail ${value} -> [${items.join(" <-> ")}]`);
+    return true;
+  }
+
+  function insertAt(index, value) {
+    if (animating || traversing) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${DLL_MAX_VALUE}.`);
+      return false;
+    }
+    if (!Number.isInteger(index) || index < 0 || index > items.length) {
+      setStatus(`Index must be between 0 and ${items.length} (size ${items.length}).`);
+      return false;
+    }
+    items.splice(index, 0, value);
+    ops++;
+    render(value, index);
+    setStatus(`Inserted ${value} at index ${index} — both neighbours rewired, size ${items.length}.`);
+    log(`insertAt(${index}, ${value}) -> [${items.join(" <-> ")}]`);
+    return true;
+  }
+
+  function deleteValue(value) {
+    if (animating || traversing) return null;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${DLL_MAX_VALUE}.`);
+      return null;
+    }
+    const index = items.indexOf(value);
+    if (index === -1) {
+      setStatus(`${value} is not in the list — nothing to delete.`);
+      return null;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    const box = nodeBoxes[index];
+    if (box && box.classList) box.classList.add("leaving");
+    setTimeout(() => {
+      items.splice(index, 1);
+      ops++;
+      render();
+      setStatus(`Deleted ${value} at index ${index} — its prev and next now point at each other`
+        + (items.length === 0 ? ", list is empty now." : `, size ${items.length}.`));
+      log(`delete ${value} -> [${items.join(" <-> ")}]`);
+      animating = false;
+      setButtonsDisabled(false);
+    }, DLL_ANIM_MS);
+    return value;
+  }
+
+  function search(value) {
+    if (animating || traversing) return -1;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${DLL_MAX_VALUE}.`);
+      return -1;
+    }
+    ops++;
+    const index = items.indexOf(value);
+    render();
+    els.ops.textContent = String(ops);
+    if (index === -1) {
+      setStatus(`${value} is not in the list — walked all ${items.length} nodes.`);
+      log(`search ${value} -> not found (${items.length} nodes walked)`);
+      return -1;
+    }
+    const box = nodeBoxes[index];
+    if (box && box.classList) {
+      box.classList.add("found");
+      setTimeout(() => box.classList.remove("found"), DLL_FOUND_MS);
+    }
+    setStatus(`Found ${value} at index ${index} — walked ${index + 1} node${index === 0 ? "" : "s"} from the head.`);
+    log(`search ${value} -> index ${index}`);
+    return index;
+  }
+
+  function reverse() {
+    if (animating || traversing) return false;
+    if (items.length < 2) {
+      setStatus(items.length === 0
+        ? "List is empty — nothing to reverse."
+        : "One node — reversing changes nothing.");
+      return false;
+    }
+    items.reverse();
+    ops++;
+    render();
+    setStatus(`Reversed — every prev/next pair swapped, head is now ${items[0]}, tail ${items[items.length - 1]}.`);
+    log(`reverse -> [${items.join(" <-> ")}]`);
+    return true;
+  }
+
+  /* Walk the list one node at a time — forward from the head, or
+     backward from the tail — lighting up each node as it is visited
+     and naming its prev and next neighbours. A traversal is one
+     operation; visited nodes stay marked until the next render. */
+  function traverse(direction) {
+    if (animating || traversing) return false;
+    if (items.length === 0) {
+      setStatus("List is empty — nothing to traverse.");
+      return false;
+    }
+    if (direction !== "forward" && direction !== "backward") direction = "forward";
+    traversing = true;
+    setButtonsDisabled(true);
+    const step = direction === "backward" ? -1 : 1;
+    let index = direction === "backward" ? items.length - 1 : 0;
+    const visited = [];
+    const visit = () => {
+      if (index < 0 || index >= items.length) {
+        traversing = false;
+        traverseTimer = null;
+        ops++;
+        els.ops.textContent = String(ops);
+        setButtonsDisabled(false);
+        setStatus(`Traversed ${direction} — visited ${visited.length} node${visited.length === 1 ? "" : "s"}: ${visited.join(" → ")}.`);
+        log(`traverse ${direction} -> ${visited.join(" -> ")}`);
+        return;
+      }
+      nodeBoxes.forEach((b) => { if (b.classList) b.classList.remove("current"); });
+      const box = nodeBoxes[index];
+      if (box && box.classList) {
+        box.classList.add("current");
+        box.classList.add("visited");
+      }
+      visited.push(items[index]);
+      const prev = index === 0 ? "NULL" : String(items[index - 1]);
+      const next = index === items.length - 1 ? "NULL" : String(items[index + 1]);
+      setStatus(`Traversing ${direction} — node ${index + 1} of ${items.length}: ${items[index]} (prev ${prev}, next ${next}).`);
+      index += step;
+      traverseTimer = setTimeout(visit, DLL_TRAVERSE_STEP_MS);
+    };
+    traverseTimer = setTimeout(visit, DLL_TRAVERSE_STEP_MS);
+    return true;
+  }
+
+  function stopTraversal() {
+    if (traverseTimer !== null) {
+      clearTimeout(traverseTimer);
+      traverseTimer = null;
+    }
+    if (traversing) {
+      traversing = false;
+      nodeBoxes.forEach((b) => { if (b.classList) b.classList.remove("current"); });
+      setButtonsDisabled(false);
+    }
+  }
+
+  function clear() {
+    if (animating) return;
+    stopTraversal();
+    stopDemo();
+    items = [];
+    render();
+    setStatus("List cleared.");
+    log("clear -> list is empty");
+  }
+
+  function stopDemo() {
+    if (demoTimer !== null) {
+      clearTimeout(demoTimer);
+      demoTimer = null;
+    }
+    demoRunning = false;
+    els.demoBtn.disabled = false;
+  }
+
+  /* Runs the scripted story one step at a time. A delete needs its
+     slide-out to finish before the next step; a traversal needs its
+     whole walk to finish. */
+  function demo() {
+    if (demoRunning || animating || traversing) return false;
+    clear();
+    demoRunning = true;
+    els.demoBtn.disabled = true;
+    setStatus("Demo running — build 10 → 20 → 30, walk it forward and back, find 20, add 5 at the head, delete 20, reverse…");
+    let step = 0;
+    const runStep = () => {
+      if (step >= DLL_DEMO_SCRIPT.length) {
+        stopDemo();
+        setStatus("Demo finished — the list is empty again. Insert your own values, or run it again.");
+        return;
+      }
+      const action = DLL_DEMO_SCRIPT[step];
+      step++;
+      let wait = DLL_DEMO_STEP_MS;
+      if (action.op === "insertHead") insertHead(action.value);
+      else if (action.op === "insertTail") insertTail(action.value);
+      else if (action.op === "insertAt") insertAt(action.index, action.value);
+      else if (action.op === "delete") { deleteValue(action.value); wait = DLL_ANIM_MS + DLL_DEMO_STEP_MS; }
+      else if (action.op === "search") search(action.value);
+      else if (action.op === "reverse") reverse();
+      else if (action.op === "traverse") {
+        traverse(action.direction);
+        /* The walk visits every node once, plus one step to finish. */
+        wait = (items.length + 1) * DLL_TRAVERSE_STEP_MS + DLL_DEMO_STEP_MS;
+      }
+      else if (action.op === "clear") clear();
+      demoTimer = setTimeout(runStep, wait);
+    };
+    demoTimer = setTimeout(runStep, DLL_DEMO_STEP_MS);
+    return true;
+  }
+
+  function reset() {
+    stopTraversal();
+    stopDemo();
+    items = [];
+    ops = 0;
+    animating = false;
+    traversing = false;
+    setButtonsDisabled(false);
+    render();
+    els.log.innerHTML = "";
+    setStatus("List is empty — insert a value to start.");
+  }
+
+  function readValueInput() {
+    const n = parseInt(els.valueInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  function readIndexInput() {
+    const n = parseInt(els.indexInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  els.insertHeadBtn.addEventListener("click", () => insertHead(readValueInput()));
+  els.insertTailBtn.addEventListener("click", () => insertTail(readValueInput()));
+  els.insertAtBtn.addEventListener("click", () => insertAt(readIndexInput(), readValueInput()));
+  els.deleteBtn.addEventListener("click", () => deleteValue(readValueInput()));
+  els.searchBtn.addEventListener("click", () => search(readValueInput()));
+  els.reverseBtn.addEventListener("click", () => reverse());
+  els.traverseForwardBtn.addEventListener("click", () => traverse("forward"));
+  els.traverseBackwardBtn.addEventListener("click", () => traverse("backward"));
+  els.demoBtn.addEventListener("click", () => demo());
+  els.clearBtn.addEventListener("click", () => clear());
+  els.valueInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") insertTail(readValueInput());
+  });
+
+  render();
+  setStatus("List is empty — insert a value to start.");
+  return {
+    insertHead, insertTail, insertAt, deleteValue, search, reverse,
+    traverse, clear, demo, reset, stopDemo, stopTraversal,
+    get size() { return items.length; },
+    get head() { return items.length === 0 ? null : items[0]; },
+    get tail() { return items.length === 0 ? null : items[items.length - 1]; },
+    get operations() { return ops; },
+    get items() { return items.slice(); },
+    get demoRunning() { return demoRunning; },
+    get traversing() { return traversing; },
+  };
+}
+
+/* Wires the doubly linked list panel in index.html; called once from app.js. */
+function initDoublyLinkedListViz() {
+  const $ = (id) => document.getElementById(id);
+  return createDoublyLinkedListViz({
+    stage: $("dllStage"),
+    valueInput: $("dllValueInput"),
+    indexInput: $("dllIndexInput"),
+    insertHeadBtn: $("insertDllHeadBtn"),
+    insertTailBtn: $("insertDllTailBtn"),
+    insertAtBtn: $("insertDllAtBtn"),
+    deleteBtn: $("deleteDllBtn"),
+    searchBtn: $("searchDllBtn"),
+    reverseBtn: $("reverseDllBtn"),
+    traverseForwardBtn: $("traverseForwardBtn"),
+    traverseBackwardBtn: $("traverseBackwardBtn"),
+    demoBtn: $("demoDllBtn"),
+    clearBtn: $("clearDllBtn"),
+    size: $("dllSize"),
+    head: $("dllHead"),
+    tail: $("dllTail"),
+    ops: $("dllOps"),
+    status: $("dllStatus"),
+    log: $("dllLog"),
+  });
+}

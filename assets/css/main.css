@@ -155,3 +155,29 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .ll-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
 .ll-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .ll-log li::before{content:"▸ ";color:var(--accent2)}
+
+/* Doubly linked list: same row layout as the linked list, but every
+   node is joined by a two-way ↔ arrow, with NULL at both ends —
+   NULL ← node ↔ node ↔ node → NULL. A node being visited during a
+   traversal glows gold; nodes already visited keep a teal outline. */
+.dll-panel{margin-top:20px}
+.dll-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.dll-stage{display:flex;flex-wrap:wrap;gap:8px;min-height:120px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:28px 14px;align-items:center}
+.dll-node{background:var(--bar);border-radius:8px;padding:10px 0;text-align:center;font-weight:700;font-size:18px;min-width:64px;position:relative}
+.dll-node.head{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#06121a}
+.dll-node.head::before{content:"HEAD";position:absolute;left:50%;top:-20px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent2)}
+.dll-node.tail::after{content:"TAIL";position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent)}
+.dll-node.entering{animation:llIn .25s ease}
+.dll-node.leaving{animation:llOut .25s ease forwards}
+.dll-node.found{box-shadow:0 0 0 2px var(--compare),0 0 16px rgba(255,209,102,.7)}
+.dll-node.current{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.8)}
+.dll-node.visited{box-shadow:0 0 0 2px var(--accent2)}
+.dll-arrow{color:var(--accent2);font-weight:800;font-size:20px}
+.dll-null{border:1px dashed var(--muted);border-radius:8px;padding:10px 12px;text-align:center;font-weight:700;font-size:14px;color:var(--muted);letter-spacing:1px}
+.dll-empty{color:var(--muted);text-align:center;padding:20px 0;width:100%}
+.dll-side{padding-top:4px}
+.dll-stats{color:var(--muted);font-size:14px}
+.dll-stats strong{color:var(--text);margin-left:6px}
+.dll-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.dll-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.dll-log li::before{content:"▸ ";color:var(--accent2)}

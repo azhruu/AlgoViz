@@ -7,6 +7,7 @@ const ALGO_NAMES = {
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
   linear: "Linear Search", binary: "Binary Search",
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
+  doublylinkedlist: "Doubly Linked List",
 };
 
 const player = new Player($("stage"), {
@@ -29,6 +30,7 @@ const playerB = new Player($("stageB"), {
 const stackViz = initStackViz();
 const queueViz = initQueueViz();
 const linkedListViz = initLinkedListViz();
+const doublyLinkedListViz = initDoublyLinkedListViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -160,7 +162,8 @@ function build() {
   const isStack = algo === "stack";
   const isQueue = algo === "queue";
   const isLinkedList = algo === "linkedlist";
-  const isStructure = isStack || isQueue || isLinkedList;
+  const isDoublyLinkedList = algo === "doublylinkedlist";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -171,6 +174,7 @@ function build() {
   $("stackPanel").hidden = !isStack;
   $("queuePanel").hidden = !isQueue;
   $("linkedListPanel").hidden = !isLinkedList;
+  $("doublyLinkedListPanel").hidden = !isDoublyLinkedList;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -230,6 +234,21 @@ function build() {
     player.stop();
     playerB.stop();
     linkedListViz.reset();
+    return;
+  }
+
+  if (isDoublyLinkedList) {
+    pseudoLines = DOUBLY_LINKED_LIST_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = DOUBLY_LINKED_LIST_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), DOUBLY_LINKED_LIST_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    doublyLinkedListViz.reset();
     return;
   }
 

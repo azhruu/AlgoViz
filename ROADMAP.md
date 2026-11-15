@@ -22,7 +22,7 @@ Tick items off as they land.
 - [x] Stack visualizer (push / pop / peek animations)
 - [x] Queue visualizer (enqueue / dequeue)
 - [x] Linked list visualizer (nodes + pointer arrows, insert/delete)
-- [ ] Doubly linked list traversal animation
+- [x] Doubly linked list traversal animation
 
 ## Week 3 — Trees & hashing
 - [ ] BST: insert + search animations on a node canvas

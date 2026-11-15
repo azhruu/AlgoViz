@@ -46,6 +46,7 @@
           <option value="stack">Stack</option>
           <option value="queue">Queue</option>
           <option value="linkedlist">Linked List</option>
+          <option value="doublylinkedlist">Doubly Linked List</option>
         </optgroup>
       </select>
     </label>
@@ -156,6 +157,35 @@
     </div>
   </div>
 
+  <div id="doublyLinkedListPanel" class="dll-panel" hidden>
+    <div class="controls">
+      <label>Value
+        <input type="number" id="dllValueInput" min="0" max="999" step="1" value="42">
+      </label>
+      <label>Index
+        <input type="number" id="dllIndexInput" min="0" step="1" value="0">
+      </label>
+      <button id="insertDllHeadBtn" class="primary">Insert head</button>
+      <button id="insertDllTailBtn">Insert tail</button>
+      <button id="insertDllAtBtn">Insert at index</button>
+      <button id="deleteDllBtn">Delete value</button>
+      <button id="searchDllBtn">Search</button>
+      <button id="reverseDllBtn">Reverse</button>
+      <button id="traverseForwardBtn">Traverse →</button>
+      <button id="traverseBackwardBtn">← Traverse</button>
+      <button id="demoDllBtn">▶ Demo</button>
+      <button id="clearDllBtn">Clear</button>
+    </div>
+    <div class="dll-area">
+      <div id="dllStage" class="dll-stage"></div>
+      <div class="dll-side">
+        <div class="dll-stats">Size <strong id="dllSize">0</strong> · Head <strong id="dllHead">—</strong> · Tail <strong id="dllTail">—</strong> · Operations <strong id="dllOps">0</strong></div>
+        <div id="dllStatus" class="dll-status">List is empty — insert a value to start.</div>
+        <ol id="dllLog" class="dll-log"></ol>
+      </div>
+    </div>
+  </div>
+
   <div id="raceResult" class="race-result" hidden></div>
   <div id="customError" class="custom-error" hidden></div>
 
@@ -188,7 +218,7 @@
     <div class="card"><h3>Searching</h3><p>Linear and binary search live — watch the scan check each element, or the mid-pointer halve the search window until it finds the target.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Trees</h3><p>BST, AVL rotations and traversals drawn as real node graphs.</p><span class="tag soon">In roadmap</span></div>
     <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS, DFS, Dijkstra and A* on an interactive grid.</p><span class="tag soon">In roadmap</span></div>
-    <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures — a linked list with head, tail and NULL pointers, plus live stack and queue panels.</p><span class="tag live">Live</span></div>
+    <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures — a linked list with head, tail and NULL pointers, a doubly linked list you can walk forward from the head or backward from the tail, plus live stack and queue panels.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Hashing</h3><p>Hash functions, collisions and chaining — made visible.</p><span class="tag soon">In roadmap</span></div>
   </div>
 </section>
