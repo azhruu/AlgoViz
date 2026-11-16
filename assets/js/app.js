@@ -7,7 +7,7 @@ const ALGO_NAMES = {
   merge: "Merge Sort", quick: "Quick Sort", heap: "Heap Sort",
   linear: "Linear Search", binary: "Binary Search",
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
-  doublylinkedlist: "Doubly Linked List",
+  doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
 };
 
 const player = new Player($("stage"), {
@@ -31,6 +31,7 @@ const stackViz = initStackViz();
 const queueViz = initQueueViz();
 const linkedListViz = initLinkedListViz();
 const doublyLinkedListViz = initDoublyLinkedListViz();
+const bstViz = initBstViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -163,7 +164,8 @@ function build() {
   const isQueue = algo === "queue";
   const isLinkedList = algo === "linkedlist";
   const isDoublyLinkedList = algo === "doublylinkedlist";
-  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList;
+  const isBst = algo === "bst";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -175,6 +177,7 @@ function build() {
   $("queuePanel").hidden = !isQueue;
   $("linkedListPanel").hidden = !isLinkedList;
   $("doublyLinkedListPanel").hidden = !isDoublyLinkedList;
+  $("bstPanel").hidden = !isBst;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -249,6 +252,21 @@ function build() {
     player.stop();
     playerB.stop();
     doublyLinkedListViz.reset();
+    return;
+  }
+
+  if (isBst) {
+    pseudoLines = BST_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = BST_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), BST_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    bstViz.reset();
     return;
   }
 

@@ -25,7 +25,7 @@ Tick items off as they land.
 - [x] Doubly linked list traversal animation
 
 ## Week 3 — Trees & hashing
-- [ ] BST: insert + search animations on a node canvas
+- [x] BST: insert + search animations on a node canvas
 - [ ] BST traversals (inorder / preorder / postorder walk-through)
 - [ ] AVL rotations (LL, RR, LR, RL) step animations
 - [ ] Hash table: hash function + chaining collisions visualizer

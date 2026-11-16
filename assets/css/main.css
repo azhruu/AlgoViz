@@ -181,3 +181,30 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .dll-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
 .dll-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .dll-log li::before{content:"▸ ";color:var(--accent2)}
+
+/* Binary search tree: nodes are circles on a canvas, laid out by
+   inorder position (left to right) and depth (top to bottom), joined
+   by SVG edges. The node being compared glows gold; nodes already
+   visited keep a teal outline; a found node glows green; the root
+   carries a ROOT label. */
+.bst-panel{margin-top:20px}
+.bst-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.bst-stage{min-height:320px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px;overflow-x:auto}
+.bst-canvas{position:relative;margin:0 auto}
+.bst-edges{position:absolute;left:0;top:0;overflow:visible}
+.bst-edges line{stroke:#3b4a7d;stroke-width:2}
+.bst-node{position:absolute;width:52px;height:52px;border-radius:50%;background:var(--bar);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;z-index:2}
+.bst-node.root{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121a}
+.bst-node.root::before{content:"ROOT";position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent2)}
+.bst-node.entering{animation:bstIn .3s ease}
+.bst-node.current{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.8)}
+.bst-node.visited{box-shadow:0 0 0 2px var(--accent2)}
+.bst-node.found{box-shadow:0 0 0 2px var(--sorted),0 0 18px rgba(56,224,200,.9)}
+@keyframes bstIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+.bst-empty{color:var(--muted);text-align:center;padding:20px 0;width:100%}
+.bst-side{padding-top:4px}
+.bst-stats{color:var(--muted);font-size:14px}
+.bst-stats strong{color:var(--text);margin-left:6px}
+.bst-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.bst-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.bst-log li::before{content:"▸ ";color:var(--accent2)}

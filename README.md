@@ -24,6 +24,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🚶 **Queue visualizer** — enqueue, dequeue and peek on a live horizontal queue with front / rear markers, slide-in / slide-out animations, an operation log and a scripted demo that enqueues 10, 20, 30, peeks, then dequeues back to empty
 - 🔗 **Linked list visualizer** — nodes joined by pointer arrows ending at NULL, with head / tail markers; insert at head, tail or any index, delete by value, search and reverse, an operation log and a scripted demo that builds 10 → 20 → 30, finds 20, adds 5 at the head, deletes 20 and reverses back to empty
 - 🔀 **Doubly linked list visualizer** — every node carries a prev (←) and a next (→) pointer, drawn as `NULL ← node ↔ node ↔ node → NULL`; walk the list forward from the head or backward from the tail one node at a time, with the current node lit up, visited nodes marked and each node's neighbours named, plus insert at head / tail / index, delete by value, search, reverse, an operation log and a scripted demo
+- 🌳 **Binary search tree visualizer** — nodes drawn as circles on a canvas, laid out by inorder position and depth and joined by edges; insert and search walk down from the root one comparison at a time, lighting up each node they visit, with the root labelled, size / height / root stats, an operation log and a scripted demo that builds a balanced 50 / 30 / 70 / 20 / 40 / 60 / 80 tree, finds 40 and misses 99
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -32,11 +33,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 |---|---|
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
 | Searching | Linear · Binary |
-| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) |
+| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas) |
 
 ## Roadmap
 
-Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST & AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
@@ -57,7 +58,7 @@ AlgoViz/
 │       ├── visualizer.js # playback engine (frames, play/pause/step)
 │       ├── sorting.js    # sorting algorithm frame-generators
 │       ├── searching.js  # searching algorithm frame-generators
-│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list)
+│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST)
 │       └── app.js        # UI wiring
 ├── ROADMAP.md            # day-by-day build plan
 └── LICENSE               # MIT

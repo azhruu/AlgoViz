@@ -1331,3 +1331,462 @@ function initDoublyLinkedListViz() {
     log: $("dllLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Binary search tree visualizer — nodes drawn on a canvas, so the    */
+/* shape of the tree is the lesson: left means smaller, right means   */
+/* bigger, and the depth of a value is the number of comparisons it   */
+/* took to reach it. Insert and search walk down from the root one    */
+/* comparison at a time, lighting up each node they visit; the new    */
+/* node pops in where the walk runs out of tree.                      */
+/* ------------------------------------------------------------------ */
+
+const BST_INFO = {
+  complexity: "O(log n) avg · O(n) worst",
+  cases: {
+    best: "O(log n) — a balanced tree halves the search space at every step",
+    average: "O(log n) — random insert order keeps the tree roughly balanced",
+    worst: "O(n) — sorted input grows a chain, and every operation walks the whole chain",
+    note: "Left subtree < node < right subtree, always. Insert walks down comparing at each node until it finds an empty spot; search walks the same path. The tree's height is the worst-case number of comparisons — which is why balancing (AVL) matters.",
+  },
+  pseudocode:
+`insert(value)         <- walk down, comparing
+  node = root
+  while node != null:
+    if value < node.value: node = node.left
+    elif value > node.value: node = node.right
+    else: already here, stop
+  attach as a leaf
+search(value)         <- walk the same path
+  node = root
+  while node != null:
+    if value == node.value: found
+    elif value < node.value: node = node.left
+    else: node = node.right
+  not found`,
+};
+
+const BST_MAX_VALUE = 999;
+/* The canvas fits about 15 nodes before the tree gets cramped. */
+const BST_MAX_NODES = 15;
+const BST_LOG_LIMIT = 8;
+/* Pause on each node during a walk, so the comparisons read step by step. */
+const BST_STEP_MS = 500;
+const BST_DEMO_STEP_MS = 550;
+const BST_FOUND_MS = 1200;
+/* Node circles are 52px; one slot per inorder position keeps siblings apart. */
+const BST_NODE_SIZE = 52;
+const BST_SLOT_WIDTH = 64;
+const BST_ROW_HEIGHT = 76;
+const BST_TOP_PAD = 22;
+
+/* The scripted demo: build a balanced 50 / 30 / 70 / 20 / 40 / 60 / 80
+   tree, find 40, then look for 99 and miss — ending with the tree
+   standing, so it can be replayed straight away. */
+const BST_DEMO_SCRIPT = [
+  { op: "insert", value: 50 }, { op: "insert", value: 30 },
+  { op: "insert", value: 70 }, { op: "insert", value: 20 },
+  { op: "insert", value: 40 }, { op: "insert", value: 60 },
+  { op: "insert", value: 80 },
+  { op: "search", value: 40 },
+  { op: "search", value: 99 },
+];
+
+/* els: { stage, valueInput, insertBtn, searchBtn, demoBtn, clearBtn,
+          size, height, root, ops, status, log } — plain DOM elements.
+   The factory keeps no other state, so a node test can drive it with
+   stub elements. */
+function createBstViz(els) {
+  let root = null;
+  let size = 0;
+  let ops = 0;
+  let animating = false;
+  let demoTimer = null;
+  let demoRunning = false;
+  /* Bumped on clear / reset so a walk left over from the old tree
+     stops instead of inserting into the new one. */
+  let walkId = 0;
+  /* Nodes highlighted by the walk in progress: the node being compared
+     right now, the ones already visited, the one just found, and the
+     one just inserted. Keyed by node object, so re-renders keep them. */
+  let current = null;
+  let found = null;
+  let entering = null;
+  let visited = new Set();
+  /* The result of the most recent finished search, for tests and the log. */
+  let lastSearch = null;
+
+  function height(node) {
+    if (node === null) return 0;
+    return 1 + Math.max(height(node.left), height(node.right));
+  }
+
+  function inOrder(node, out) {
+    if (node === null) return out;
+    inOrder(node.left, out);
+    out.push(node.value);
+    inOrder(node.right, out);
+    return out;
+  }
+
+  /* Inorder walk assigns each node its slot (left subtree, node, right
+     subtree), which is exactly the left-to-right order on the canvas;
+     depth sets the row. Positions are centres, so edges join cleanly. */
+  function layout() {
+    const positions = new Map();
+    let slot = 0;
+    const walk = (node, depth) => {
+      if (node === null) return;
+      walk(node.left, depth + 1);
+      positions.set(node, {
+        x: BST_TOP_PAD + slot * BST_SLOT_WIDTH + BST_SLOT_WIDTH / 2,
+        y: BST_TOP_PAD + depth * BST_ROW_HEIGHT,
+        depth,
+      });
+      slot++;
+      walk(node.right, depth + 1);
+    };
+    walk(root, 0);
+    return positions;
+  }
+
+  function render() {
+    els.stage.innerHTML = "";
+    const canvas = document.createElement("div");
+    canvas.className = "bst-canvas";
+    if (root === null) {
+      const empty = document.createElement("div");
+      empty.className = "bst-empty";
+      empty.textContent = "— empty —";
+      canvas.appendChild(empty);
+    } else {
+      const positions = layout();
+      const treeHeight = height(root);
+      const width = BST_TOP_PAD * 2 + size * BST_SLOT_WIDTH;
+      const canvasHeight = BST_TOP_PAD * 2 + (treeHeight - 1) * BST_ROW_HEIGHT + BST_NODE_SIZE;
+      canvas.style.width = width + "px";
+      canvas.style.height = canvasHeight + "px";
+      /* Edges first, so nodes draw on top of them. */
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "bst-edges");
+      svg.setAttribute("width", String(width));
+      svg.setAttribute("height", String(canvasHeight));
+      const edges = [];
+      const collect = (node, parent) => {
+        if (node === null) return;
+        if (parent !== null) edges.push([parent, node]);
+        collect(node.left, node);
+        collect(node.right, node);
+      };
+      collect(root, null);
+      edges.forEach(([parent, child]) => {
+        const p = positions.get(parent);
+        const c = positions.get(child);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", String(p.x));
+        line.setAttribute("y1", String(p.y + BST_NODE_SIZE));
+        line.setAttribute("x2", String(c.x));
+        line.setAttribute("y2", String(c.y));
+        svg.appendChild(line);
+      });
+      canvas.appendChild(svg);
+      positions.forEach((pos, node) => {
+        const box = document.createElement("div");
+        box.className = "bst-node";
+        box.textContent = String(node.value);
+        if (node === root) box.classList.add("root");
+        if (node === current) box.classList.add("current");
+        if (visited.has(node)) box.classList.add("visited");
+        if (node === found) box.classList.add("found");
+        if (node === entering) box.classList.add("entering");
+        box.style.left = (pos.x - BST_NODE_SIZE / 2) + "px";
+        box.style.top = pos.y + "px";
+        canvas.appendChild(box);
+      });
+    }
+    els.stage.appendChild(canvas);
+    els.size.textContent = String(size);
+    els.height.textContent = root === null ? "—" : String(height(root));
+    els.root.textContent = root === null ? "—" : String(root.value);
+    els.ops.textContent = String(ops);
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > BST_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.insertBtn, els.searchBtn, els.demoBtn, els.clearBtn]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function validValue(value) {
+    return Number.isInteger(value) && value >= 0 && value <= BST_MAX_VALUE;
+  }
+
+  /* How many nodes an insert or a search of this value would compare —
+     the walk length, used to pace the demo. */
+  function pathLength(value) {
+    let node = root;
+    let n = 0;
+    while (node !== null) {
+      n++;
+      if (value === node.value) break;
+      node = value < node.value ? node.left : node.right;
+    }
+    return n;
+  }
+
+  function directionText(value, nodeValue) {
+    return value < nodeValue
+      ? `${value} < ${nodeValue}, go left`
+      : `${value} > ${nodeValue}, go right`;
+  }
+
+  function insert(value) {
+    if (animating) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${BST_MAX_VALUE}.`);
+      return false;
+    }
+    if (size >= BST_MAX_NODES) {
+      setStatus(`The tree is full — ${BST_MAX_NODES} nodes is all the canvas fits. Clear it to start over.`);
+      return false;
+    }
+    /* Duplicates are rejected up front, so the walk never has to explain one. */
+    let probe = root;
+    while (probe !== null) {
+      if (value === probe.value) {
+        setStatus(`${value} is already in the tree — a BST holds each value once.`);
+        return false;
+      }
+      probe = value < probe.value ? probe.left : probe.right;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    visited = new Set();
+    current = null;
+    found = null;
+    entering = null;
+    const id = ++walkId;
+    let node = root;
+    let parent = null;
+    let comparisons = 0;
+    const step = () => {
+      if (id !== walkId) return;
+      if (node === null) {
+        /* Ran out of tree: attach the new node here. */
+        const leaf = { value, left: null, right: null };
+        if (parent === null) root = leaf;
+        else if (value < parent.value) parent.left = leaf;
+        else parent.right = leaf;
+        size++;
+        ops++;
+        entering = leaf;
+        current = null;
+        animating = false;
+        setButtonsDisabled(false);
+        render();
+        setStatus(parent === null
+          ? `Inserted ${value} as the root — the tree starts here.`
+          : `Inserted ${value} under ${parent.value} after ${comparisons} comparison${comparisons === 1 ? "" : "s"} — ${directionText(value, parent.value)}.`);
+        log(`insert ${value} -> size ${size}, height ${height(root)}`);
+        setTimeout(() => { entering = null; render(); }, BST_FOUND_MS);
+        return;
+      }
+      comparisons++;
+      current = node;
+      visited.add(node);
+      render();
+      setStatus(`Compare ${value} with ${node.value} — ${directionText(value, node.value)} (comparison ${comparisons}).`);
+      parent = node;
+      node = value < node.value ? node.left : node.right;
+      setTimeout(step, BST_STEP_MS);
+    };
+    step();
+    return true;
+  }
+
+  function search(value) {
+    if (animating) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${BST_MAX_VALUE}.`);
+      return false;
+    }
+    if (root === null) {
+      setStatus("The tree is empty — insert a value first.");
+      return false;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    visited = new Set();
+    current = null;
+    found = null;
+    entering = null;
+    const id = ++walkId;
+    let node = root;
+    let depth = 0;
+    let comparisons = 0;
+    const step = () => {
+      if (id !== walkId) return;
+      if (node === null) {
+        ops++;
+        lastSearch = { value, found: false, comparisons };
+        current = null;
+        animating = false;
+        setButtonsDisabled(false);
+        render();
+        setStatus(`${value} is not in the tree — walked ${comparisons} node${comparisons === 1 ? "" : "s"} and ran out of tree.`);
+        log(`search ${value} -> not found (${comparisons} comparisons)`);
+        return;
+      }
+      comparisons++;
+      current = node;
+      visited.add(node);
+      render();
+      if (value === node.value) {
+        ops++;
+        lastSearch = { value, found: true, comparisons, depth };
+        found = node;
+        current = null;
+        animating = false;
+        setButtonsDisabled(false);
+        render();
+        setStatus(`Found ${value} at depth ${depth} after ${comparisons} comparison${comparisons === 1 ? "" : "s"}${depth === 0 ? " — it was the root." : "."}`);
+        log(`search ${value} -> found at depth ${depth} (${comparisons} comparisons)`);
+        setTimeout(() => { found = null; render(); }, BST_FOUND_MS);
+        return;
+      }
+      setStatus(`Compare ${value} with ${node.value} — ${directionText(value, node.value)} (comparison ${comparisons}).`);
+      node = value < node.value ? node.left : node.right;
+      depth++;
+      setTimeout(step, BST_STEP_MS);
+    };
+    step();
+    return true;
+  }
+
+  function clear() {
+    if (animating) return;
+    stopDemo();
+    walkId++;
+    root = null;
+    size = 0;
+    current = null;
+    found = null;
+    entering = null;
+    visited = new Set();
+    lastSearch = null;
+    render();
+    setStatus("Tree cleared.");
+    log("clear -> tree is empty");
+  }
+
+  function stopDemo() {
+    if (demoTimer !== null) {
+      clearTimeout(demoTimer);
+      demoTimer = null;
+    }
+    demoRunning = false;
+    els.demoBtn.disabled = false;
+  }
+
+  /* Runs the scripted story one step at a time. Each step waits for
+     its own walk to finish (walk length + one beat to attach or
+     report), so the demo never overtakes the animation. */
+  function demo() {
+    if (demoRunning || animating) return false;
+    clear();
+    demoRunning = true;
+    els.demoBtn.disabled = true;
+    setStatus("Demo running — building 50, 30, 70, 20, 40, 60, 80, then searching for 40 and 99…");
+    let step = 0;
+    const runStep = () => {
+      if (step >= BST_DEMO_SCRIPT.length) {
+        stopDemo();
+        setStatus("Demo finished — the tree is standing. Insert your own values, search for one, or run it again.");
+        return;
+      }
+      const action = BST_DEMO_SCRIPT[step];
+      step++;
+      /* The walk visits pathLength nodes, plus one beat to attach or report. */
+      const wait = (pathLength(action.value) + 1) * BST_STEP_MS + BST_DEMO_STEP_MS;
+      if (action.op === "insert") insert(action.value);
+      else if (action.op === "search") search(action.value);
+      demoTimer = setTimeout(runStep, wait);
+    };
+    demoTimer = setTimeout(runStep, BST_DEMO_STEP_MS);
+    return true;
+  }
+
+  function reset() {
+    stopDemo();
+    walkId++;
+    root = null;
+    size = 0;
+    ops = 0;
+    animating = false;
+    current = null;
+    found = null;
+    entering = null;
+    visited = new Set();
+    lastSearch = null;
+    setButtonsDisabled(false);
+    render();
+    els.log.innerHTML = "";
+    setStatus("Tree is empty — insert a value to start.");
+  }
+
+  function readValueInput() {
+    const n = parseInt(els.valueInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  els.insertBtn.addEventListener("click", () => insert(readValueInput()));
+  els.searchBtn.addEventListener("click", () => search(readValueInput()));
+  els.demoBtn.addEventListener("click", () => demo());
+  els.clearBtn.addEventListener("click", () => clear());
+  els.valueInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") insert(readValueInput());
+  });
+
+  render();
+  setStatus("Tree is empty — insert a value to start.");
+  return {
+    insert, search, clear, demo, reset, stopDemo,
+    get size() { return size; },
+    get treeHeight() { return height(root); },
+    get rootValue() { return root === null ? null : root.value; },
+    get operations() { return ops; },
+    get items() { return inOrder(root, []); },
+    get demoRunning() { return demoRunning; },
+    get lastSearch() { return lastSearch; },
+  };
+}
+
+/* Wires the BST panel in index.html; called once from app.js. */
+function initBstViz() {
+  const $ = (id) => document.getElementById(id);
+  return createBstViz({
+    stage: $("bstStage"),
+    valueInput: $("bstValueInput"),
+    insertBtn: $("insertBstBtn"),
+    searchBtn: $("searchBstBtn"),
+    demoBtn: $("demoBstBtn"),
+    clearBtn: $("clearBstBtn"),
+    size: $("bstSize"),
+    height: $("bstHeight"),
+    root: $("bstRoot"),
+    ops: $("bstOps"),
+    status: $("bstStatus"),
+    log: $("bstLog"),
+  });
+}
