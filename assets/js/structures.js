@@ -1363,7 +1363,11 @@ search(value)         <- walk the same path
     if value == node.value: found
     elif value < node.value: node = node.left
     else: node = node.right
-  not found`,
+  not found
+traverse(order)       <- visit every node once
+  inorder:   left, node, right  -> values in sorted order
+  preorder:  node, left, right  -> the root first
+  postorder: left, right, node  -> the leaves first`,
 };
 
 const BST_MAX_VALUE = 999;
@@ -1381,8 +1385,8 @@ const BST_ROW_HEIGHT = 76;
 const BST_TOP_PAD = 22;
 
 /* The scripted demo: build a balanced 50 / 30 / 70 / 20 / 40 / 60 / 80
-   tree, find 40, then look for 99 and miss — ending with the tree
-   standing, so it can be replayed straight away. */
+   tree, find 40, then look for 99 and miss, then walk it inorder —
+   ending with the tree standing, so it can be replayed straight away. */
 const BST_DEMO_SCRIPT = [
   { op: "insert", value: 50 }, { op: "insert", value: 30 },
   { op: "insert", value: 70 }, { op: "insert", value: 20 },
@@ -1390,9 +1394,14 @@ const BST_DEMO_SCRIPT = [
   { op: "insert", value: 80 },
   { op: "search", value: 40 },
   { op: "search", value: 99 },
+  { op: "traverse", order: "inorder" },
 ];
+/* Shown in the traversal output line until the first walk runs. */
+const BST_TRAVERSAL_PLACEHOLDER =
+  "No traversal yet — build a tree, then walk it inorder, preorder or postorder.";
 
-/* els: { stage, valueInput, insertBtn, searchBtn, demoBtn, clearBtn,
+/* els: { stage, valueInput, insertBtn, searchBtn, inorderBtn,
+          preorderBtn, postorderBtn, traversalOutput, demoBtn, clearBtn,
           size, height, root, ops, status, log } — plain DOM elements.
    The factory keeps no other state, so a node test can drive it with
    stub elements. */
@@ -1403,6 +1412,10 @@ function createBstViz(els) {
   let animating = false;
   let demoTimer = null;
   let demoRunning = false;
+  let traversalTimer = null;
+  let traversing = false;
+  /* Bumped when a traversal is stopped, so a leftover step does nothing. */
+  let traversalId = 0;
   /* Bumped on clear / reset so a walk left over from the old tree
      stops instead of inserting into the new one. */
   let walkId = 0;
@@ -1415,6 +1428,8 @@ function createBstViz(els) {
   let visited = new Set();
   /* The result of the most recent finished search, for tests and the log. */
   let lastSearch = null;
+  /* The result of the most recent finished traversal, for tests and the log. */
+  let lastTraversal = null;
 
   function height(node) {
     if (node === null) return 0;
@@ -1524,7 +1539,8 @@ function createBstViz(els) {
   }
 
   function setButtonsDisabled(disabled) {
-    [els.insertBtn, els.searchBtn, els.demoBtn, els.clearBtn]
+    [els.insertBtn, els.searchBtn, els.inorderBtn, els.preorderBtn,
+     els.postorderBtn, els.demoBtn, els.clearBtn]
       .forEach((b) => { b.disabled = disabled; });
   }
 
@@ -1674,8 +1690,94 @@ function createBstViz(els) {
     return true;
   }
 
+  /* The nodes in traversal order — the walk itself, without animation.
+     Inorder visits left, node, right (so the values come out sorted);
+     preorder visits the node first; postorder visits the node last. */
+  function traversalOrder(node, order, out) {
+    if (node === null) return out;
+    if (order === "preorder") out.push(node);
+    traversalOrder(node.left, order, out);
+    if (order === "inorder") out.push(node);
+    traversalOrder(node.right, order, out);
+    if (order === "postorder") out.push(node);
+    return out;
+  }
+
+  /* Walk the tree one node at a time in the chosen order, lighting up
+     each node as it is visited and building the visit order in the
+     output line — so the difference between the three orders reads
+     off the tree itself. A traversal is one operation. */
+  function traverse(order) {
+    if (animating || traversing) return false;
+    if (order !== "inorder" && order !== "preorder" && order !== "postorder")
+      order = "inorder";
+    if (root === null) {
+      setStatus("The tree is empty — insert a value first.");
+      return false;
+    }
+    const label = order.charAt(0).toUpperCase() + order.slice(1);
+    const rule = order === "inorder"
+      ? "left subtree, then the node, then the right subtree — the values come out sorted"
+      : order === "preorder"
+        ? "the node first, then its left subtree, then its right subtree"
+        : "the left subtree, then the right subtree, then the node — the leaves come first";
+    traversing = true;
+    setButtonsDisabled(true);
+    visited = new Set();
+    current = null;
+    found = null;
+    entering = null;
+    const id = ++traversalId;
+    const nodes = traversalOrder(root, order, []);
+    const values = [];
+    let index = 0;
+    els.traversalOutput.textContent = `${label}: `;
+    setStatus(`${label} traversal — ${rule}. Visiting ${nodes.length} nodes…`);
+    const step = () => {
+      if (id !== traversalId) return;
+      if (index >= nodes.length) {
+        traversing = false;
+        traversalTimer = null;
+        ops++;
+        lastTraversal = { order, values: values.slice() };
+        current = null;
+        setButtonsDisabled(false);
+        render();
+        setStatus(`${label} complete — visited ${values.length} node${values.length === 1 ? "" : "s"}: ${values.join(" → ")}.`);
+        log(`${order} -> ${values.join(", ")}`);
+        return;
+      }
+      const node = nodes[index];
+      index++;
+      values.push(node.value);
+      current = node;
+      visited.add(node);
+      render();
+      els.traversalOutput.textContent = `${label}: ${values.join(" → ")}`;
+      setStatus(`${label} — visiting ${node.value} (${index} of ${nodes.length}).`);
+      traversalTimer = setTimeout(step, BST_STEP_MS);
+    };
+    traversalTimer = setTimeout(step, BST_STEP_MS);
+    return true;
+  }
+
+  function stopTraversal() {
+    if (traversalTimer !== null) {
+      clearTimeout(traversalTimer);
+      traversalTimer = null;
+    }
+    if (traversing) {
+      traversing = false;
+      traversalId++;
+      current = null;
+      setButtonsDisabled(false);
+      render();
+    }
+  }
+
   function clear() {
     if (animating) return;
+    stopTraversal();
     stopDemo();
     walkId++;
     root = null;
@@ -1685,6 +1787,8 @@ function createBstViz(els) {
     entering = null;
     visited = new Set();
     lastSearch = null;
+    lastTraversal = null;
+    els.traversalOutput.textContent = BST_TRAVERSAL_PLACEHOLDER;
     render();
     setStatus("Tree cleared.");
     log("clear -> tree is empty");
@@ -1700,27 +1804,34 @@ function createBstViz(els) {
   }
 
   /* Runs the scripted story one step at a time. Each step waits for
-     its own walk to finish (walk length + one beat to attach or
-     report), so the demo never overtakes the animation. */
+     its own walk to finish (walk length + one beat to attach, report
+     or visit the last node), so the demo never overtakes the animation. */
   function demo() {
     if (demoRunning || animating) return false;
     clear();
     demoRunning = true;
     els.demoBtn.disabled = true;
-    setStatus("Demo running — building 50, 30, 70, 20, 40, 60, 80, then searching for 40 and 99…");
+    setStatus("Demo running — building 50, 30, 70, 20, 40, 60, 80, then searching for 40 and 99, then an inorder walk…");
     let step = 0;
     const runStep = () => {
       if (step >= BST_DEMO_SCRIPT.length) {
         stopDemo();
-        setStatus("Demo finished — the tree is standing. Insert your own values, search for one, or run it again.");
+        setStatus("Demo finished — the tree is standing and the inorder walk came out sorted. Insert your own values, search for one, or run it again.");
         return;
       }
       const action = BST_DEMO_SCRIPT[step];
       step++;
-      /* The walk visits pathLength nodes, plus one beat to attach or report. */
-      const wait = (pathLength(action.value) + 1) * BST_STEP_MS + BST_DEMO_STEP_MS;
-      if (action.op === "insert") insert(action.value);
-      else if (action.op === "search") search(action.value);
+      let wait;
+      if (action.op === "traverse") {
+        /* The walk visits every node once, plus one step to finish. */
+        wait = (size + 1) * BST_STEP_MS + BST_DEMO_STEP_MS;
+        traverse(action.order);
+      } else {
+        /* The walk visits pathLength nodes, plus one beat to attach or report. */
+        wait = (pathLength(action.value) + 1) * BST_STEP_MS + BST_DEMO_STEP_MS;
+        if (action.op === "insert") insert(action.value);
+        else if (action.op === "search") search(action.value);
+      }
       demoTimer = setTimeout(runStep, wait);
     };
     demoTimer = setTimeout(runStep, BST_DEMO_STEP_MS);
@@ -1728,18 +1839,22 @@ function createBstViz(els) {
   }
 
   function reset() {
+    stopTraversal();
     stopDemo();
     walkId++;
     root = null;
     size = 0;
     ops = 0;
     animating = false;
+    traversing = false;
     current = null;
     found = null;
     entering = null;
     visited = new Set();
     lastSearch = null;
+    lastTraversal = null;
     setButtonsDisabled(false);
+    els.traversalOutput.textContent = BST_TRAVERSAL_PLACEHOLDER;
     render();
     els.log.innerHTML = "";
     setStatus("Tree is empty — insert a value to start.");
@@ -1752,6 +1867,9 @@ function createBstViz(els) {
 
   els.insertBtn.addEventListener("click", () => insert(readValueInput()));
   els.searchBtn.addEventListener("click", () => search(readValueInput()));
+  els.inorderBtn.addEventListener("click", () => traverse("inorder"));
+  els.preorderBtn.addEventListener("click", () => traverse("preorder"));
+  els.postorderBtn.addEventListener("click", () => traverse("postorder"));
   els.demoBtn.addEventListener("click", () => demo());
   els.clearBtn.addEventListener("click", () => clear());
   els.valueInput.addEventListener("keydown", (e) => {
@@ -1761,14 +1879,16 @@ function createBstViz(els) {
   render();
   setStatus("Tree is empty — insert a value to start.");
   return {
-    insert, search, clear, demo, reset, stopDemo,
+    insert, search, traverse, clear, demo, reset, stopDemo, stopTraversal,
     get size() { return size; },
     get treeHeight() { return height(root); },
     get rootValue() { return root === null ? null : root.value; },
     get operations() { return ops; },
     get items() { return inOrder(root, []); },
     get demoRunning() { return demoRunning; },
+    get traversing() { return traversing; },
     get lastSearch() { return lastSearch; },
+    get lastTraversal() { return lastTraversal; },
   };
 }
 
@@ -1780,6 +1900,10 @@ function initBstViz() {
     valueInput: $("bstValueInput"),
     insertBtn: $("insertBstBtn"),
     searchBtn: $("searchBstBtn"),
+    inorderBtn: $("inorderBstBtn"),
+    preorderBtn: $("preorderBstBtn"),
+    postorderBtn: $("postorderBstBtn"),
+    traversalOutput: $("bstTraversalOutput"),
     demoBtn: $("demoBstBtn"),
     clearBtn: $("clearBstBtn"),
     size: $("bstSize"),
