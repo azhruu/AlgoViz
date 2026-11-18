@@ -209,3 +209,30 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .bst-traversal-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--accent2);border-radius:10px;font-size:14px;line-height:1.5}
 .bst-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .bst-log li::before{content:"▸ ";color:var(--accent2)}
+
+.avl-panel{margin-top:20px}
+.avl-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.avl-stage{min-height:320px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px;overflow-x:auto}
+.avl-canvas{position:relative;margin:0 auto}
+.avl-edges{position:absolute;left:0;top:0;overflow:visible}
+.avl-edges line{stroke:#3b4a7d;stroke-width:2}
+.avl-node{position:absolute;width:52px;height:52px;border-radius:50%;background:var(--bar);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;z-index:2}
+.avl-node.root{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121a}
+.avl-node.root::before{content:"ROOT";position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent2)}
+.avl-node.entering{animation:bstIn .3s ease}
+.avl-node.current{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.8)}
+.avl-node.visited{box-shadow:0 0 0 2px var(--accent2)}
+/* The nodes a rotation is moving light up gold; the node whose
+   balance factor broke gets a red ring, so the cause reads first. */
+.avl-node.rotating{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.9)}
+.avl-node.imbalanced{box-shadow:0 0 0 2px var(--danger),0 0 18px rgba(255,93,122,.8)}
+.avl-bf{position:absolute;right:-8px;bottom:-8px;min-width:20px;text-align:center;background:var(--panel);border:1px solid #26336b;border-radius:6px;padding:1px 4px;font-size:10px;font-weight:800;color:var(--muted);z-index:3}
+.avl-bf.bad{border-color:var(--danger);color:var(--danger)}
+.avl-empty{color:var(--muted);text-align:center;padding:20px 0;width:100%}
+.avl-side{padding-top:4px}
+.avl-stats{color:var(--muted);font-size:14px}
+.avl-stats strong{color:var(--text);margin-left:6px}
+.avl-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.avl-rotation-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--compare);border-radius:10px;font-size:14px;line-height:1.5}
+.avl-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.avl-log li::before{content:"▸ ";color:var(--accent2)}

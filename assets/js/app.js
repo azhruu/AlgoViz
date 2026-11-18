@@ -8,6 +8,7 @@ const ALGO_NAMES = {
   linear: "Linear Search", binary: "Binary Search",
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
+  avl: "AVL Tree",
 };
 
 const player = new Player($("stage"), {
@@ -32,6 +33,7 @@ const queueViz = initQueueViz();
 const linkedListViz = initLinkedListViz();
 const doublyLinkedListViz = initDoublyLinkedListViz();
 const bstViz = initBstViz();
+const avlViz = initAvlViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -165,7 +167,8 @@ function build() {
   const isLinkedList = algo === "linkedlist";
   const isDoublyLinkedList = algo === "doublylinkedlist";
   const isBst = algo === "bst";
-  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst;
+  const isAvl = algo === "avl";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -178,6 +181,7 @@ function build() {
   $("linkedListPanel").hidden = !isLinkedList;
   $("doublyLinkedListPanel").hidden = !isDoublyLinkedList;
   $("bstPanel").hidden = !isBst;
+  $("avlPanel").hidden = !isAvl;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -252,6 +256,21 @@ function build() {
     player.stop();
     playerB.stop();
     doublyLinkedListViz.reset();
+    return;
+  }
+
+  if (isAvl) {
+    pseudoLines = AVL_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = AVL_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), AVL_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    avlViz.reset();
     return;
   }
 

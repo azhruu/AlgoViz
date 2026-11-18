@@ -1914,3 +1914,631 @@ function initBstViz() {
     log: $("bstLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* AVL tree visualizer — a BST that rebalances itself. Every node     */
+/* carries a height and shows its balance factor (left height minus   */
+/* right height) as a small badge; the factor must stay in -1..+1.    */
+/* Insert walks down comparing, like the BST, then walks back up:     */
+/* the first ancestor whose balance factor breaks is fixed on the     */
+/* spot with one of the four rotations — LL (right rotation), RR      */
+/* (left rotation), LR (left then right) or RL (right then left) —    */
+/* each shown step by step, with the nodes being rotated lit up and   */
+/* the rotation named in the status line and the rotation output.     */
+/* ------------------------------------------------------------------ */
+
+const AVL_INFO = {
+  complexity: "O(log n) all cases",
+  cases: {
+    best: "O(log n) — the tree stays balanced, so every walk is short",
+    average: "O(log n) — insert, search and delete all follow a path of logarithmic length",
+    worst: "O(log n) — the balance factor of every node is kept in -1..+1, so the height can never degrade to O(n) the way an unbalanced BST can",
+    note: "An AVL tree keeps every subtree's heights within one of each other, so the height stays O(log n). The price is a rotation (or two) after some inserts: the tree rebalances itself on the spot, and one rotation is always enough after a single insert.",
+  },
+  pseudocode:
+`insert(value)         <- walk down, comparing
+  node = root
+  while node != null:
+    if value < node.value: node = node.left
+    elif value > node.value: node = node.right
+    else: already here, stop
+  attach as a leaf, height 1
+rebalance(node)       <- walk back up to the root
+  update height(node)
+  balance = height(left) - height(right)
+  if balance > 1:  left is heavy
+    if balance(left) < 0: rotateLeft(left)   <- LR case
+    rotateRight(node)                       <- LL case
+  if balance < -1: right is heavy
+    if balance(right) > 0: rotateRight(right) <- RL case
+    rotateLeft(node)                        <- RR case
+rotateRight(y)        <- y's left child becomes the root
+  x = y.left; t = x.right
+  x.right = y; y.left = t
+  update heights
+rotateLeft(x)         <- mirror image of rotateRight`,
+};
+
+const AVL_MAX_VALUE = 999;
+/* The canvas fits about 15 nodes before the tree gets cramped. */
+const AVL_MAX_NODES = 15;
+const AVL_LOG_LIMIT = 8;
+/* Pause on each node during a walk, so the comparisons read step by step. */
+const AVL_STEP_MS = 500;
+const AVL_DEMO_STEP_MS = 550;
+const AVL_FOUND_MS = 1200;
+
+/* The scripted demo: one case per rotation type, clearing between
+   cases so each rotation reads on its own — LL (30, 20, 10), RR
+   (10, 20, 30), LR (30, 10, 20), RL (10, 30, 20) — ending with the
+   RL tree standing, so it can be replayed straight away. */
+const AVL_DEMO_SCRIPT = [
+  { name: "LL", values: [30, 20, 10] },
+  { name: "RR", values: [10, 20, 30] },
+  { name: "LR", values: [30, 10, 20] },
+  { name: "RL", values: [10, 30, 20] },
+];
+/* Shown in the rotation output line until the first rotation runs. */
+const AVL_ROTATION_PLACEHOLDER =
+  "No rotations yet — insert values that unbalance the tree, or run the demo to see all four rotation cases.";
+
+/* --- Pure AVL helpers: no DOM, so a node test can drive them. --- */
+
+/* Height of a subtree: 0 for an empty one, the stored height otherwise. */
+function avlHeightOf(node) {
+  return node === null ? 0 : node.height;
+}
+
+function avlUpdateHeight(node) {
+  node.height = 1 + Math.max(avlHeightOf(node.left), avlHeightOf(node.right));
+}
+
+/* Left height minus right height: -1, 0 or +1 in a balanced tree. */
+function avlBalanceFactor(node) {
+  return avlHeightOf(node.left) - avlHeightOf(node.right);
+}
+
+function avlNode(value) {
+  return { value, left: null, right: null, height: 1 };
+}
+
+/* Right rotation at y: y's left child x becomes the subtree root, y
+   drops to x's right, and x's old right subtree becomes y's left. */
+function avlRotateRight(y) {
+  const x = y.left;
+  const t = x.right;
+  x.right = y;
+  y.left = t;
+  avlUpdateHeight(y);
+  avlUpdateHeight(x);
+  return x;
+}
+
+/* Left rotation at x: the mirror image of a right rotation. */
+function avlRotateLeft(x) {
+  const y = x.right;
+  const t = y.left;
+  y.left = x;
+  x.right = t;
+  avlUpdateHeight(x);
+  avlUpdateHeight(y);
+  return y;
+}
+
+/* Every node's balance factor within -1..+1, checked recursively. */
+function avlIsBalanced(node) {
+  if (node === null) return true;
+  const bf = avlBalanceFactor(node);
+  if (bf < -1 || bf > 1) return false;
+  return avlIsBalanced(node.left) && avlIsBalanced(node.right);
+}
+
+function avlInOrder(node, out) {
+  if (node === null) return out;
+  avlInOrder(node.left, out);
+  out.push(node.value);
+  avlInOrder(node.right, out);
+  return out;
+}
+
+/* els: { stage, valueInput, insertBtn, demoBtn, clearBtn, size, height,
+          root, rotations, ops, status, rotationOutput, log } — plain
+   DOM elements. The factory keeps no other state, so a node test can
+   drive it with stub elements. */
+function createAvlViz(els) {
+  let root = null;
+  let size = 0;
+  let ops = 0;
+  let rotations = 0;
+  let animating = false;
+  let demoTimer = null;
+  let demoRunning = false;
+  /* Bumped on clear / reset so a walk left over from the old tree
+     stops instead of inserting into the new one. */
+  let walkId = 0;
+  /* Nodes highlighted by the walk in progress: the node being compared
+     right now, the ones already visited, the one just inserted, the
+     nodes a rotation is moving, and the node whose balance broke. */
+  let current = null;
+  let entering = null;
+  let visited = new Set();
+  let rotating = new Set();
+  let imbalanced = null;
+  /* The most recent finished rotation, for tests and the log. */
+  let lastRotation = null;
+
+  function height(node) {
+    return avlHeightOf(node);
+  }
+
+  /* Inorder walk assigns each node its slot (left subtree, node, right
+     subtree), which is exactly the left-to-right order on the canvas;
+     depth sets the row. Positions are centres, so edges join cleanly. */
+  function layout() {
+    const positions = new Map();
+    let slot = 0;
+    const walk = (node, depth) => {
+      if (node === null) return;
+      walk(node.left, depth + 1);
+      positions.set(node, {
+        x: BST_TOP_PAD + slot * BST_SLOT_WIDTH + BST_SLOT_WIDTH / 2,
+        y: BST_TOP_PAD + depth * BST_ROW_HEIGHT,
+        depth,
+      });
+      slot++;
+      walk(node.right, depth + 1);
+    };
+    walk(root, 0);
+    return positions;
+  }
+
+  function render() {
+    els.stage.innerHTML = "";
+    const canvas = document.createElement("div");
+    canvas.className = "avl-canvas";
+    if (root === null) {
+      const empty = document.createElement("div");
+      empty.className = "avl-empty";
+      empty.textContent = "— empty —";
+      canvas.appendChild(empty);
+    } else {
+      const positions = layout();
+      const treeHeight = height(root);
+      const width = BST_TOP_PAD * 2 + size * BST_SLOT_WIDTH;
+      const canvasHeight = BST_TOP_PAD * 2 + (treeHeight - 1) * BST_ROW_HEIGHT + BST_NODE_SIZE;
+      canvas.style.width = width + "px";
+      canvas.style.height = canvasHeight + "px";
+      /* Edges first, so nodes draw on top of them. */
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "avl-edges");
+      svg.setAttribute("width", String(width));
+      svg.setAttribute("height", String(canvasHeight));
+      const edges = [];
+      const collect = (node, parent) => {
+        if (node === null) return;
+        if (parent !== null) edges.push([parent, node]);
+        collect(node.left, node);
+        collect(node.right, node);
+      };
+      collect(root, null);
+      edges.forEach(([parent, child]) => {
+        const p = positions.get(parent);
+        const c = positions.get(child);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", String(p.x));
+        line.setAttribute("y1", String(p.y + BST_NODE_SIZE));
+        line.setAttribute("x2", String(c.x));
+        line.setAttribute("y2", String(c.y));
+        svg.appendChild(line);
+      });
+      canvas.appendChild(svg);
+      positions.forEach((pos, node) => {
+        const box = document.createElement("div");
+        box.className = "avl-node";
+        box.textContent = String(node.value);
+        if (node === root) box.classList.add("root");
+        if (node === current) box.classList.add("current");
+        if (visited.has(node)) box.classList.add("visited");
+        if (node === entering) box.classList.add("entering");
+        if (rotating.has(node)) box.classList.add("rotating");
+        if (node === imbalanced) box.classList.add("imbalanced");
+        /* The balance factor rides on the node, so the imbalance that
+           triggers a rotation is visible before the rotation runs. */
+        const bf = avlBalanceFactor(node);
+        const badge = document.createElement("span");
+        badge.className = "avl-bf";
+        badge.textContent = (bf >= 0 ? "+" : "") + String(bf);
+        if (bf < -1 || bf > 1) badge.classList.add("bad");
+        box.appendChild(badge);
+        box.style.left = (pos.x - BST_NODE_SIZE / 2) + "px";
+        box.style.top = pos.y + "px";
+        canvas.appendChild(box);
+      });
+    }
+    els.stage.appendChild(canvas);
+    els.size.textContent = String(size);
+    els.height.textContent = root === null ? "—" : String(height(root));
+    els.root.textContent = root === null ? "—" : String(root.value);
+    els.rotations.textContent = String(rotations);
+    els.ops.textContent = String(ops);
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > AVL_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.insertBtn, els.demoBtn, els.clearBtn]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function validValue(value) {
+    return Number.isInteger(value) && value >= 0 && value <= AVL_MAX_VALUE;
+  }
+
+  /* How many nodes an insert of this value would compare — the walk
+     length, used to pace the demo. */
+  function pathLength(value) {
+    let node = root;
+    let n = 0;
+    while (node !== null) {
+      n++;
+      if (value === node.value) break;
+      node = value < node.value ? node.left : node.right;
+    }
+    return n;
+  }
+
+  function directionText(value, nodeValue) {
+    return value < nodeValue
+      ? `${value} < ${nodeValue}, go left`
+      : `${value} > ${nodeValue}, go right`;
+  }
+
+  /* Rewire a parent's child pointer (or the root) after a rotation. */
+  function replaceChild(parent, oldChild, newChild) {
+    if (parent === null) root = newChild;
+    else if (parent.left === oldChild) parent.left = newChild;
+    else parent.right = newChild;
+  }
+
+  /* One rotation step inside the rebalance walk: name it, light up
+     the nodes it moves, wait a beat, then apply it and re-render.
+     `done` runs after the rotation has landed. */
+  function rotationStep(kind, pivot, child, parent, done, id) {
+    const verb = kind === "right" ? "Right rotation" : "Left rotation";
+    const at = pivot.value;
+    rotating = new Set([pivot, child]);
+    imbalanced = pivot;
+    current = null;
+    render();
+    setStatus(`${verb} at ${at} — ${child.value} becomes the new subtree root`
+      + ` and ${at} drops to its ${kind === "right" ? "right" : "left"}.`);
+    setTimeout(() => {
+      if (id !== walkId) return;
+      const newRoot = kind === "right" ? avlRotateRight(pivot) : avlRotateLeft(pivot);
+      replaceChild(parent, pivot, newRoot);
+      rotations++;
+      lastRotation = { kind, at, child: child.value };
+      rotating = new Set([newRoot, pivot]);
+      render();
+      setStatus(`${verb} at ${at} done — ${child.value} is the subtree root now,`
+        + ` ${at} sits below it, and the balance factors are back in range.`);
+      log(`${kind} rotation at ${at} -> ${child.value} is the subtree root`);
+      setTimeout(() => {
+        if (id !== walkId) return;
+        rotating = new Set();
+        imbalanced = null;
+        render();
+        done();
+      }, AVL_STEP_MS);
+    }, AVL_STEP_MS);
+  }
+
+  /* Walk the insert path back up from the deepest ancestor, checking
+     each balance factor; the first ancestor that breaks is fixed with
+     its rotation case, then the walk continues upward. `done` runs
+     when the whole tree is balanced again. */
+  function rebalance(path, done, id) {
+    /* Ancestors deepest first; path[i - 1] is the parent of path[i]. */
+    let index = path.length - 1;
+    const nextAncestor = () => {
+      if (id !== walkId) return;
+      if (index < 0) {
+        done();
+        return;
+      }
+      const node = path[index];
+      const parent = index === 0 ? null : path[index - 1];
+      index--;
+      avlUpdateHeight(node);
+      const bf = avlBalanceFactor(node);
+      current = node;
+      visited.add(node);
+      render();
+      setStatus(`Checking balance at ${node.value} — left height ${height(node.left)},`
+        + ` right height ${height(node.right)}, balance factor ${bf >= 0 ? "+" : ""}${bf}.`);
+      setTimeout(() => {
+        if (id !== walkId) return;
+        if (bf > 1 || bf < -1) {
+          /* The heavy side and the heavy child's lean name the case:
+             same direction is a single rotation, opposite directions
+             need two — the child rotates first, then the node. */
+          const heavyLeft = bf > 1;
+          const heavyChild = heavyLeft ? node.left : node.right;
+          const childBf = avlBalanceFactor(heavyChild);
+          const single = heavyLeft ? childBf >= 0 : childBf <= 0;
+          const caseName = heavyLeft
+            ? (single ? "LL" : "LR")
+            : (single ? "RR" : "RL");
+          const side = heavyLeft ? "left" : "right";
+          setStatus(`Imbalance at ${node.value} — balance factor ${bf >= 0 ? "+" : ""}${bf},`
+            + ` too heavy on the ${side}. ${caseName} case: `
+            + (single
+              ? `one ${heavyLeft ? "right" : "left"} rotation at ${node.value}.`
+              : `a ${heavyLeft ? "left" : "right"} rotation at ${heavyChild.value} first,`
+                + ` then a ${heavyLeft ? "right" : "left"} rotation at ${node.value}.`));
+          els.rotationOutput.textContent = `${caseName} case at ${node.value}`
+            + ` (balance factor ${bf >= 0 ? "+" : ""}${bf}) — `
+            + (single
+              ? `single ${heavyLeft ? "right" : "left"} rotation.`
+              : `double rotation: ${heavyLeft ? "left" : "right"} at ${heavyChild.value},`
+                + ` then ${heavyLeft ? "right" : "left"} at ${node.value}.`);
+          log(`${caseName} case at ${node.value} (balance factor ${bf >= 0 ? "+" : ""}${bf})`);
+          setTimeout(() => {
+            if (id !== walkId) return;
+            const secondRotation = () => {
+              /* The second rotation runs at the same node, whose
+                 parent is unchanged — but its heavy child is now the
+                 new subtree root the first rotation put there. */
+              const newChild = heavyLeft ? node.left : node.right;
+              rotationStep(heavyLeft ? "right" : "left", node, newChild, parent,
+                () => { lastRotation.type = caseName; nextAncestor(); }, id);
+            };
+            if (single) {
+              rotationStep(heavyLeft ? "right" : "left", node, heavyChild, parent,
+                () => { lastRotation.type = caseName; nextAncestor(); }, id);
+            } else {
+              /* First rotate the heavy child, then the node itself;
+                 the child's new root is the node for the second step. */
+              rotationStep(heavyLeft ? "left" : "right", heavyChild,
+                heavyLeft ? heavyChild.right : heavyChild.left,
+                node, secondRotation, id);
+            }
+          }, AVL_STEP_MS);
+        } else {
+          nextAncestor();
+        }
+      }, AVL_STEP_MS);
+    };
+    nextAncestor();
+  }
+
+  /* Insert with an optional completion callback (the demo chains on
+     it). `done` is called with true once the tree is balanced again,
+     or with false immediately if the insert was rejected. */
+  function insert(value, done) {
+    const finish = (ok) => { if (typeof done === "function") done(ok); };
+    if (animating) { finish(false); return false; }
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${AVL_MAX_VALUE}.`);
+      finish(false);
+      return false;
+    }
+    if (size >= AVL_MAX_NODES) {
+      setStatus(`The tree is full — ${AVL_MAX_NODES} nodes is all the canvas fits. Clear it to start over.`);
+      finish(false);
+      return false;
+    }
+    /* Duplicates are rejected up front, so the walk never has to explain one. */
+    let probe = root;
+    while (probe !== null) {
+      if (value === probe.value) {
+        setStatus(`${value} is already in the tree — an AVL tree holds each value once.`);
+        finish(false);
+        return false;
+      }
+      probe = value < probe.value ? probe.left : probe.right;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    visited = new Set();
+    current = null;
+    entering = null;
+    rotating = new Set();
+    imbalanced = null;
+    const id = ++walkId;
+    let node = root;
+    let parent = null;
+    let comparisons = 0;
+    const path = [];
+    const step = () => {
+      if (id !== walkId) return;
+      if (node === null) {
+        /* Ran out of tree: attach the new node here. */
+        const leaf = avlNode(value);
+        if (parent === null) root = leaf;
+        else if (value < parent.value) parent.left = leaf;
+        else parent.right = leaf;
+        size++;
+        ops++;
+        entering = leaf;
+        current = null;
+        render();
+        setStatus(parent === null
+          ? `Inserted ${value} as the root — the tree starts here. Now checking the balance back up…`
+          : `Inserted ${value} under ${parent.value} after ${comparisons} comparison${comparisons === 1 ? "" : "s"} — ${directionText(value, parent.value)}. Now checking the balance back up…`);
+        log(`insert ${value} -> size ${size}, height ${height(root)}`);
+        setTimeout(() => { entering = null; render(); }, AVL_FOUND_MS);
+        /* The rebalance walk runs on the ancestors, deepest first. */
+        rebalance(path, () => {
+          if (id !== walkId) return;
+          animating = false;
+          setButtonsDisabled(false);
+          render();
+          setStatus(`Tree is balanced — height ${height(root)}, root ${root.value},`
+            + ` ${rotations} rotation${rotations === 1 ? "" : "s"} so far. Insert another value, or run the demo.`);
+          finish(true);
+        }, id);
+        return;
+      }
+      comparisons++;
+      current = node;
+      visited.add(node);
+      render();
+      setStatus(`Compare ${value} with ${node.value} — ${directionText(value, node.value)} (comparison ${comparisons}).`);
+      parent = node;
+      path.push(node);
+      node = value < node.value ? node.left : node.right;
+      setTimeout(step, AVL_STEP_MS);
+    };
+    step();
+    return true;
+  }
+
+  /* Reset the tree itself, without touching the demo flags — the demo
+     clears between rotation cases while it is still running. */
+  function clearTree() {
+    walkId++;
+    root = null;
+    size = 0;
+    current = null;
+    entering = null;
+    visited = new Set();
+    rotating = new Set();
+    imbalanced = null;
+    lastRotation = null;
+    els.rotationOutput.textContent = AVL_ROTATION_PLACEHOLDER;
+    render();
+  }
+
+  function clear() {
+    if (animating) return;
+    stopDemo();
+    clearTree();
+    setStatus("Tree cleared.");
+    log("clear -> tree is empty");
+  }
+
+  function stopDemo() {
+    if (demoTimer !== null) {
+      clearTimeout(demoTimer);
+      demoTimer = null;
+    }
+    demoRunning = false;
+    els.demoBtn.disabled = false;
+  }
+
+  /* Runs the scripted story case by case, chaining on each insert's
+     completion so the demo never overtakes the animation: LL, then RR,
+     then LR, then RL, clearing between cases. */
+  function demo() {
+    if (demoRunning || animating) return false;
+    clearTree();
+    demoRunning = true;
+    els.demoBtn.disabled = true;
+    setStatus("Demo running — one case per rotation: LL, then RR, LR and RL…");
+    let caseIndex = 0;
+    const runCase = () => {
+      if (caseIndex >= AVL_DEMO_SCRIPT.length) {
+        stopDemo();
+        setStatus("Demo finished — all four rotations: LL, RR, LR and RL. The RL tree is standing — insert your own values, or run it again.");
+        return;
+      }
+      const rotationCase = AVL_DEMO_SCRIPT[caseIndex];
+      caseIndex++;
+      clearTree();
+      setStatus(`${rotationCase.name} case — inserting ${rotationCase.values.join(", ")}…`);
+      let i = 0;
+      const runInsert = () => {
+        if (i >= rotationCase.values.length) {
+          demoTimer = setTimeout(runCase, AVL_DEMO_STEP_MS * 2);
+          return;
+        }
+        const value = rotationCase.values[i];
+        i++;
+        insert(value, runInsert);
+      };
+      demoTimer = setTimeout(runInsert, AVL_DEMO_STEP_MS);
+    };
+    runCase();
+    return true;
+  }
+
+  function reset() {
+    stopDemo();
+    walkId++;
+    root = null;
+    size = 0;
+    ops = 0;
+    rotations = 0;
+    animating = false;
+    current = null;
+    entering = null;
+    visited = new Set();
+    rotating = new Set();
+    imbalanced = null;
+    lastRotation = null;
+    setButtonsDisabled(false);
+    els.rotationOutput.textContent = AVL_ROTATION_PLACEHOLDER;
+    render();
+    els.log.innerHTML = "";
+    setStatus("Tree is empty — insert a value to start.");
+  }
+
+  function readValueInput() {
+    const n = parseInt(els.valueInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  els.insertBtn.addEventListener("click", () => insert(readValueInput()));
+  els.demoBtn.addEventListener("click", () => demo());
+  els.clearBtn.addEventListener("click", () => clear());
+  els.valueInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") insert(readValueInput());
+  });
+
+  render();
+  setStatus("Tree is empty — insert a value to start.");
+  return {
+    insert, clear, demo, reset, stopDemo, pathLength,
+    get size() { return size; },
+    get treeHeight() { return height(root); },
+    get rootValue() { return root === null ? null : root.value; },
+    get rotations() { return rotations; },
+    get operations() { return ops; },
+    get items() { return avlInOrder(root, []); },
+    get balanced() { return avlIsBalanced(root); },
+    get demoRunning() { return demoRunning; },
+    get animating() { return animating; },
+    get lastRotation() { return lastRotation; },
+  };
+}
+
+/* Wires the AVL panel in index.html; called once from app.js. */
+function initAvlViz() {
+  const $ = (id) => document.getElementById(id);
+  return createAvlViz({
+    stage: $("avlStage"),
+    valueInput: $("avlValueInput"),
+    insertBtn: $("insertAvlBtn"),
+    demoBtn: $("demoAvlBtn"),
+    clearBtn: $("clearAvlBtn"),
+    size: $("avlSize"),
+    height: $("avlHeight"),
+    root: $("avlRoot"),
+    rotations: $("avlRotations"),
+    ops: $("avlOps"),
+    status: $("avlStatus"),
+    rotationOutput: $("avlRotationOutput"),
+    log: $("avlLog"),
+  });
+}

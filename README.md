@@ -26,6 +26,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🔀 **Doubly linked list visualizer** — every node carries a prev (←) and a next (→) pointer, drawn as `NULL ← node ↔ node ↔ node → NULL`; walk the list forward from the head or backward from the tail one node at a time, with the current node lit up, visited nodes marked and each node's neighbours named, plus insert at head / tail / index, delete by value, search, reverse, an operation log and a scripted demo
 - 🌳 **Binary search tree visualizer** — nodes drawn as circles on a canvas, laid out by inorder position and depth and joined by edges; insert and search walk down from the root one comparison at a time, lighting up each node they visit, with the root labelled, size / height / root stats, an operation log and a scripted demo that builds a balanced 50 / 30 / 70 / 20 / 40 / 60 / 80 tree, finds 40 and misses 99, then walks it inorder
 - 🚶 **BST traversals** — walk the tree inorder, preorder or postorder one node at a time, with each visited node lit up in order and the visit order building live in the output line (inorder comes out sorted, preorder starts at the root, postorder ends at the root); the scripted demo finishes with an inorder walk
+- 🌳 **AVL tree visualizer** — a self-balancing BST on the same node canvas, with every node's balance factor shown as a badge; insert walks down comparing, then walks back up checking balance factors, and the first ancestor that breaks is fixed on the spot with a step-by-step rotation — LL (right rotation), RR (left rotation), LR (left then right) or RL (right then left) — with the rotating nodes lit up, the case named in the rotation output and a running rotation count; the scripted demo shows all four cases in turn, clearing between them
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -34,11 +35,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 |---|---|
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
 | Searching | Linear · Binary |
-| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas, inorder / preorder / postorder traversals) |
+| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas, inorder / preorder / postorder traversals) · AVL Tree (self-balancing insert, balance-factor badges, LL / RR / LR / RL rotation animations) |
 
 ## Roadmap
 
-Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
