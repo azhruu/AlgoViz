@@ -2542,3 +2542,406 @@ function initAvlViz() {
     log: $("avlLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Hash table visualizer — h(key) = key mod 8, collisions resolved   */
+/* by chaining. Each bucket is a row; keys that land in the same      */
+/* bucket chain up left to right, so a collision reads at a glance.   */
+/* ------------------------------------------------------------------ */
+
+const HASH_INFO = {
+  complexity: "O(1) average, O(n) worst",
+  cases: {
+    best: "O(1) — the key hashes straight to an empty bucket",
+    average: "O(1) — with a good hash function and a low load factor, chains stay short",
+    worst: "O(n) — every key collides into the same bucket and the chain becomes a list",
+    note: "A hash table trades space for speed: the hash function turns a key into a bucket index in O(1), and collisions are resolved by chaining — each bucket holds a small list of the keys that landed there. Keep the load factor low and the chains stay short.",
+  },
+  pseudocode:
+`hash(key)            <- turn the key into a bucket
+  return key mod m       (m = number of buckets)
+insert(key)          <- chain on collision
+  i = hash(key)
+  if key in buckets[i]: already here, stop
+  buckets[i].append(key) <- behind any keys already there
+search(key)          <- look only in one bucket
+  i = hash(key)
+  return key in buckets[i]
+delete(key)          <- unlink from its chain
+  i = hash(key)
+  buckets[i].remove(key)`,
+};
+
+const HASH_BUCKET_COUNT = 8;
+const HASH_MAX_VALUE = 999;
+const HASH_LOG_LIMIT = 8;
+/* Pause on each demo step, so the hash computation reads before the
+   next key lands. */
+const HASH_DEMO_STEP_MS = 650;
+
+/* The scripted demo: 10, 18 and 26 all hash to bucket 2 (a chain of
+   three), then a search finds 18 mid-chain; 5 and 13 collide in
+   bucket 5; deleting 18 leaves both chains intact. */
+const HASH_DEMO_SCRIPT = [
+  { op: "insert", value: 10 },
+  { op: "insert", value: 18 },
+  { op: "insert", value: 26 },
+  { op: "search", value: 18 },
+  { op: "insert", value: 5 },
+  { op: "insert", value: 13 },
+  { op: "delete", value: 18 },
+  { op: "search", value: 26 },
+];
+/* Shown in the formula line until the first key is hashed. */
+const HASH_FORMULA_PLACEHOLDER =
+  "No hash computed yet — insert or search a key to see h(key) = key mod 8.";
+
+/* --- Pure hash helpers: no DOM, so a node test can drive them. --- */
+
+/* h(key) = key mod m, always in 0..m-1 even for negative keys. */
+function hashIndexOf(key, bucketCount) {
+  return ((key % bucketCount) + bucketCount) % bucketCount;
+}
+
+/* Pure chaining model: buckets of key lists, a collision counter and
+   a load factor — no DOM, so a node test can drive it directly. */
+function createHashModel(bucketCount) {
+  const buckets = Array.from({ length: bucketCount }, () => []);
+  let collisions = 0;
+  let size = 0;
+
+  function insert(key) {
+    const index = hashIndexOf(key, bucketCount);
+    const chain = buckets[index];
+    const position = chain.indexOf(key);
+    if (position !== -1)
+      return { index, position, inserted: false, collided: chain.length > 1 };
+    const collided = chain.length > 0;
+    chain.push(key);
+    size++;
+    if (collided) collisions++;
+    return { index, position: chain.length - 1, inserted: true, collided };
+  }
+
+  function search(key) {
+    const index = hashIndexOf(key, bucketCount);
+    const position = buckets[index].indexOf(key);
+    return { index, position, found: position !== -1 };
+  }
+
+  function remove(key) {
+    const index = hashIndexOf(key, bucketCount);
+    const position = buckets[index].indexOf(key);
+    if (position === -1) return { index, position, removed: false };
+    buckets[index].splice(position, 1);
+    size--;
+    return { index, position, removed: true };
+  }
+
+  function clear() {
+    buckets.forEach((chain) => { chain.length = 0; });
+    collisions = 0;
+    size = 0;
+  }
+
+  return {
+    insert, search, remove, clear,
+    get buckets() { return buckets.map((chain) => chain.slice()); },
+    get size() { return size; },
+    get collisions() { return collisions; },
+    get bucketCount() { return bucketCount; },
+    loadFactor() { return size / bucketCount; },
+  };
+}
+
+/* els: { stage, valueInput, insertBtn, searchBtn, deleteBtn, demoBtn,
+          clearBtn, size, buckets, loadFactor, collisions, status,
+          formulaOutput, log } — plain DOM elements. The factory keeps
+   no other state, so a node test can drive it with stub elements. */
+function createHashViz(els) {
+  const model = createHashModel(HASH_BUCKET_COUNT);
+  let ops = 0;
+  let demoTimer = null;
+  let demoRunning = false;
+  /* The bucket and chain position the last operation touched, and
+     how it should light up: a fresh key, a found key, or a key that
+     collided into an occupied bucket. Cleared by the next operation. */
+  let highlight = null;
+  let formula = HASH_FORMULA_PLACEHOLDER;
+
+  function render() {
+    els.stage.innerHTML = "";
+    model.buckets.forEach((chain, index) => {
+      const row = document.createElement("div");
+      row.className = "hash-bucket";
+      if (highlight !== null && highlight.index === index) row.classList.add("active");
+      if (chain.length > 1) row.classList.add("has-collision");
+
+      const label = document.createElement("span");
+      label.className = "hash-bucket-label";
+      label.textContent = "Bucket " + index;
+      if (chain.length > 1) {
+        const tag = document.createElement("span");
+        tag.className = "hash-collision-tag";
+        tag.textContent = " · collision ×" + (chain.length - 1);
+        label.appendChild(tag);
+      }
+      row.appendChild(label);
+
+      const chainEl = document.createElement("div");
+      chainEl.className = "hash-chain";
+      if (chain.length === 0) {
+        const empty = document.createElement("span");
+        empty.className = "hash-chain-empty";
+        empty.textContent = "— empty —";
+        chainEl.appendChild(empty);
+      }
+      chain.forEach((value, position) => {
+        if (position > 0) {
+          const arrow = document.createElement("span");
+          arrow.className = "hash-arrow";
+          arrow.textContent = "→";
+          chainEl.appendChild(arrow);
+        }
+        const node = document.createElement("div");
+        node.className = "hash-node";
+        node.textContent = String(value);
+        if (highlight !== null && highlight.index === index
+            && highlight.position === position) {
+          if (highlight.kind === "found") node.classList.add("found");
+          else if (highlight.kind === "collision") node.classList.add("collision");
+          else node.classList.add("entering");
+        }
+        chainEl.appendChild(node);
+      });
+      row.appendChild(chainEl);
+      els.stage.appendChild(row);
+    });
+    els.size.textContent = String(model.size);
+    els.buckets.textContent = String(model.bucketCount);
+    els.loadFactor.textContent = model.loadFactor().toFixed(2);
+    els.collisions.textContent = String(model.collisions);
+    els.ops.textContent = String(ops);
+    els.formulaOutput.textContent = formula;
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function setFormula(message) {
+    formula = message;
+    els.formulaOutput.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > HASH_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.insertBtn, els.searchBtn, els.deleteBtn, els.demoBtn, els.clearBtn]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function hashLine(value, index) {
+    return `h(${value}) = ${value} mod ${HASH_BUCKET_COUNT} = ${index}`;
+  }
+
+  function readValueInput() {
+    const n = parseInt(els.valueInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  function validValue(value) {
+    if (!Number.isInteger(value) || value < 0 || value > HASH_MAX_VALUE) {
+      setStatus(`Enter a whole number between 0 and ${HASH_MAX_VALUE}.`);
+      return false;
+    }
+    return true;
+  }
+
+  function insert(value) {
+    if (!validValue(value)) return false;
+    const result = model.insert(value);
+    ops++;
+    if (!result.inserted) {
+      highlight = { index: result.index, position: result.position, kind: "found" };
+      setFormula(`${hashLine(value, result.index)} — already in the table.`);
+      render();
+      setStatus(`${value} is already in bucket ${result.index} — duplicates are not stored.`);
+      log(`insert ${value} -> already present (bucket ${result.index})`);
+      return false;
+    }
+    highlight = {
+      index: result.index,
+      position: result.position,
+      kind: result.collided ? "collision" : "entering",
+    };
+    const chain = model.buckets[result.index];
+    setFormula(result.collided
+      ? `${hashLine(value, result.index)} — collision! Bucket ${result.index} already held `
+        + `${chain.slice(0, -1).join(", ")}, so ${value} chains behind it `
+        + `(collision #${model.collisions}).`
+      : `${hashLine(value, result.index)} — bucket ${result.index} was empty.`);
+    render();
+    setStatus(result.collided
+      ? `Inserted ${value} into bucket ${result.index} — collision, chained behind `
+        + `${chain.slice(0, -1).join(", ")}.`
+      : `Inserted ${value} into bucket ${result.index} — no collision.`);
+    log(`insert ${value} -> bucket ${result.index}`
+      + (result.collided ? " (collision)" : ""));
+    return true;
+  }
+
+  function search(value) {
+    if (!validValue(value)) return false;
+    const result = model.search(value);
+    ops++;
+    setFormula(`${hashLine(value, result.index)} — `
+      + (result.found
+        ? `found at chain position ${result.position}.`
+        : `bucket ${result.index} holds ${model.buckets[result.index].join(", ") || "nothing"} — not here.`));
+    if (result.found) {
+      highlight = { index: result.index, position: result.position, kind: "found" };
+      render();
+      setStatus(`Found ${value} in bucket ${result.index}, chain position ${result.position} — `
+        + `only that one bucket had to be checked.`);
+      log(`search ${value} -> found (bucket ${result.index}, position ${result.position})`);
+    } else {
+      highlight = { index: result.index, position: -1, kind: "entering" };
+      render();
+      setStatus(`${value} is not in the table — ${hashLine(value, result.index)}, `
+        + `and bucket ${result.index} does not hold it.`);
+      log(`search ${value} -> not found (bucket ${result.index})`);
+    }
+    return result.found;
+  }
+
+  function remove(value) {
+    if (!validValue(value)) return false;
+    const result = model.remove(value);
+    ops++;
+    if (!result.removed) {
+      highlight = { index: result.index, position: -1, kind: "entering" };
+      setFormula(`${hashLine(value, result.index)} — not in bucket ${result.index}, nothing to delete.`);
+      render();
+      setStatus(`${value} is not in the table — nothing to delete.`);
+      log(`delete ${value} -> not present (bucket ${result.index})`);
+      return false;
+    }
+    highlight = null;
+    setFormula(`${hashLine(value, result.index)} — removed from chain position ${result.position}.`);
+    render();
+    setStatus(`Deleted ${value} from bucket ${result.index}`
+      + (model.buckets[result.index].length === 0 ? " — the bucket is empty now." : "."));
+    log(`delete ${value} -> removed from bucket ${result.index}`);
+    return true;
+  }
+
+  function clear() {
+    if (demoRunning) return;
+    stopDemo();
+    model.clear();
+    highlight = null;
+    setFormula(HASH_FORMULA_PLACEHOLDER);
+    render();
+    setStatus("Table cleared.");
+    log("clear -> table is empty");
+  }
+
+  function stopDemo() {
+    if (demoTimer !== null) {
+      clearTimeout(demoTimer);
+      demoTimer = null;
+    }
+    demoRunning = false;
+    els.demoBtn.disabled = false;
+  }
+
+  /* Runs the scripted story one step at a time: a 3-long collision
+     chain in bucket 2, a mid-chain search, a second collision in
+     bucket 5, then a delete that leaves both chains standing. */
+  function demo() {
+    if (demoRunning) return false;
+    clear();
+    demoRunning = true;
+    els.demoBtn.disabled = true;
+    setStatus("Demo running — watch 10, 18 and 26 collide into bucket 2…");
+    let step = 0;
+    const runStep = () => {
+      if (step >= HASH_DEMO_SCRIPT.length) {
+        stopDemo();
+        setStatus("Demo finished — bucket 2 holds 10 → 26 and bucket 5 holds 5 → 13. Insert your own keys, or run it again.");
+        return;
+      }
+      const action = HASH_DEMO_SCRIPT[step];
+      step++;
+      if (action.op === "insert") insert(action.value);
+      else if (action.op === "search") search(action.value);
+      else if (action.op === "delete") remove(action.value);
+      demoTimer = setTimeout(runStep, HASH_DEMO_STEP_MS);
+    };
+    demoTimer = setTimeout(runStep, HASH_DEMO_STEP_MS);
+    return true;
+  }
+
+  function reset() {
+    stopDemo();
+    model.clear();
+    ops = 0;
+    highlight = null;
+    setButtonsDisabled(false);
+    setFormula(HASH_FORMULA_PLACEHOLDER);
+    render();
+    els.log.innerHTML = "";
+    setStatus("Table is empty — insert a key to start.");
+  }
+
+  els.insertBtn.addEventListener("click", () => insert(readValueInput()));
+  els.searchBtn.addEventListener("click", () => search(readValueInput()));
+  els.deleteBtn.addEventListener("click", () => remove(readValueInput()));
+  els.demoBtn.addEventListener("click", () => demo());
+  els.clearBtn.addEventListener("click", () => clear());
+  els.valueInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") insert(readValueInput());
+  });
+
+  render();
+  setStatus("Table is empty — insert a key to start.");
+  return {
+    insert, search, remove, clear, demo, reset, stopDemo,
+    get size() { return model.size; },
+    get collisions() { return model.collisions; },
+    get loadFactor() { return model.loadFactor(); },
+    get buckets() { return model.buckets; },
+    get operations() { return ops; },
+    get formula() { return formula; },
+    get demoRunning() { return demoRunning; },
+  };
+}
+
+/* Wires the hash table panel in index.html; called once from app.js. */
+function initHashViz() {
+  const $ = (id) => document.getElementById(id);
+  return createHashViz({
+    stage: $("hashStage"),
+    valueInput: $("hashValueInput"),
+    insertBtn: $("insertHashBtn"),
+    searchBtn: $("searchHashBtn"),
+    deleteBtn: $("deleteHashBtn"),
+    demoBtn: $("demoHashBtn"),
+    clearBtn: $("clearHashBtn"),
+    size: $("hashSize"),
+    buckets: $("hashBuckets"),
+    loadFactor: $("hashLoadFactor"),
+    collisions: $("hashCollisions"),
+    ops: $("hashOps"),
+    status: $("hashStatus"),
+    formulaOutput: $("hashFormulaOutput"),
+    log: $("hashLog"),
+  });
+}

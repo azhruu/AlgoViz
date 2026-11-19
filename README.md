@@ -27,6 +27,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🌳 **Binary search tree visualizer** — nodes drawn as circles on a canvas, laid out by inorder position and depth and joined by edges; insert and search walk down from the root one comparison at a time, lighting up each node they visit, with the root labelled, size / height / root stats, an operation log and a scripted demo that builds a balanced 50 / 30 / 70 / 20 / 40 / 60 / 80 tree, finds 40 and misses 99, then walks it inorder
 - 🚶 **BST traversals** — walk the tree inorder, preorder or postorder one node at a time, with each visited node lit up in order and the visit order building live in the output line (inorder comes out sorted, preorder starts at the root, postorder ends at the root); the scripted demo finishes with an inorder walk
 - 🌳 **AVL tree visualizer** — a self-balancing BST on the same node canvas, with every node's balance factor shown as a badge; insert walks down comparing, then walks back up checking balance factors, and the first ancestor that breaks is fixed on the spot with a step-by-step rotation — LL (right rotation), RR (left rotation), LR (left then right) or RL (right then left) — with the rotating nodes lit up, the case named in the rotation output and a running rotation count; the scripted demo shows all four cases in turn, clearing between them
+- 🔑 **Hash table visualizer** — keys hash into 8 buckets with h(key) = key mod 8, shown live in the formula line; keys that collide chain up in the same bucket with arrows, the colliding bucket lights up gold, and the panel tracks size, load factor and a running collision count; insert, search and delete, plus a scripted demo that builds a 3-long collision chain in bucket 2, finds 18 mid-chain, collides 5 and 13 in bucket 5, then deletes 18
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -35,11 +36,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 |---|---|
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
 | Searching | Linear · Binary |
-| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas, inorder / preorder / postorder traversals) · AVL Tree (self-balancing insert, balance-factor badges, LL / RR / LR / RL rotation animations) |
+| Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas, inorder / preorder / postorder traversals) · AVL Tree (self-balancing insert, balance-factor badges, LL / RR / LR / RL rotation animations) · Hash Table (insert / search / delete, h(key) = key mod 8, chaining collisions, load factor + collision count) |
 
 ## Roadmap
 
-Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing ✓ → BFS / DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
@@ -60,7 +61,7 @@ AlgoViz/
 │       ├── visualizer.js # playback engine (frames, play/pause/step)
 │       ├── sorting.js    # sorting algorithm frame-generators
 │       ├── searching.js  # searching algorithm frame-generators
-│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST)
+│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST, AVL, hash table)
 │       └── app.js        # UI wiring
 ├── ROADMAP.md            # day-by-day build plan
 └── LICENSE               # MIT

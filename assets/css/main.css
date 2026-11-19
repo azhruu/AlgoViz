@@ -236,3 +236,30 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .avl-rotation-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--compare);border-radius:10px;font-size:14px;line-height:1.5}
 .avl-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .avl-log li::before{content:"▸ ";color:var(--accent2)}
+
+/* Hash table visualizer — one row per bucket, chains drawn left to
+   right with arrows. A fresh key slides in, a found key flashes
+   green, and a key that collides lights its bucket gold. */
+.hash-panel{margin-top:20px}
+.hash-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.hash-stage{display:flex;flex-direction:column;gap:8px;min-height:320px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px}
+.hash-bucket{display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 10px;border:1px solid #1d2749;border-radius:10px}
+.hash-bucket.active{border-color:var(--accent)}
+.hash-bucket.has-collision{border-color:var(--compare)}
+.hash-bucket-label{flex:0 0 118px;font-size:13px;font-weight:700;color:var(--muted)}
+.hash-bucket-label .hash-collision-tag{color:var(--compare)}
+.hash-chain{display:flex;align-items:center;flex-wrap:wrap}
+.hash-node{background:var(--bar);border-radius:8px;padding:8px 14px;text-align:center;font-weight:700;font-size:16px}
+.hash-node.entering{animation:hashIn .3s ease}
+.hash-node.found{box-shadow:0 0 0 2px var(--sorted),0 0 16px rgba(56,224,200,.9)}
+.hash-node.collision{box-shadow:0 0 0 2px var(--compare),0 0 16px rgba(255,209,102,.8)}
+.hash-arrow{color:var(--muted);font-weight:700;padding:0 6px}
+.hash-chain-empty{color:var(--muted);font-size:14px}
+.hash-side{padding-top:4px}
+.hash-stats{color:var(--muted);font-size:14px}
+.hash-stats strong{color:var(--text);margin-left:6px}
+.hash-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.hash-formula-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--accent2);border-radius:10px;font-size:14px;line-height:1.5}
+.hash-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.hash-log li::before{content:"▸ ";color:var(--accent2)}
+@keyframes hashIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
