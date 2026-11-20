@@ -2945,3 +2945,556 @@ function initHashViz() {
     log: $("hashLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Heap visualizer — a complete binary tree kept in an array: the     */
+/* root is the extreme value (largest in a max-heap, smallest in a    */
+/* min-heap), and every parent beats its children. Insert appends at  */
+/* the end and bubbles up, swapping with its parent while it wins;    */
+/* extract takes the root, moves the last element up top, and sifts   */
+/* it down, swapping with the better child while it loses. The tree   */
+/* view and the array view show the same heap side by side, so the    */
+/* index arithmetic — parent (i - 1) / 2, children 2i + 1 and 2i + 2  */
+/* — reads off both at once.                                          */
+/* ------------------------------------------------------------------ */
+
+const HEAP_INFO = {
+  complexity: "O(log n)",
+  cases: {
+    best: "O(1) — peek reads the root; an insert that stays put swaps nothing",
+    average: "O(log n) — insert and extract walk one root-to-leaf path",
+    worst: "O(log n) — a value that bubbles all the way up (or down) swaps once per level",
+    note: "A heap is a complete binary tree stored in an array: index 0 is the root, index i has parent (i - 1) / 2 and children 2i + 1 and 2i + 2. The root is always the extreme value, so peek is O(1) — which is why heaps back priority queues and heap sort. Switching min/max re-heapifies the same values in place.",
+  },
+  pseudocode:
+`insert(value)         <- append, then bubble up
+  heap[size++] = value
+  i = size - 1
+  while i > 0 and heap[i] beats heap[parent(i)]:
+    swap heap[i], heap[parent(i)]
+    i = parent(i)
+extract()             <- take the root, sift the last one down
+  root = heap[0]
+  heap[0] = heap[--size]
+  i = 0
+  while heap[i] loses to its better child:
+    swap heap[i], heap[betterChild(i)]
+    i = betterChild(i)
+peek()                <- look at the root
+  return heap[0]
+min or max            <- the mode flips which value wins`,
+};
+
+const HEAP_MAX_VALUE = 999;
+/* The canvas fits about 15 nodes before the tree gets cramped. */
+const HEAP_MAX_NODES = 15;
+const HEAP_LOG_LIMIT = 8;
+/* Pause on each comparison during a bubble-up or sift-down, so the
+   swaps read step by step. */
+const HEAP_STEP_MS = 500;
+const HEAP_DEMO_STEP_MS = 550;
+const HEAP_FLASH_MS = 900;
+/* Node circles are 52px; one slot per position in the widest level
+   keeps siblings apart. */
+const HEAP_NODE_SIZE = 52;
+const HEAP_SLOT_WIDTH = 64;
+const HEAP_ROW_HEIGHT = 76;
+const HEAP_TOP_PAD = 22;
+
+/* The scripted demo: build a max-heap from 50 / 30 / 70 / 20 / 40 /
+   60 / 80 (70 bubbles to the root, then 80 takes it), peek at the
+   root, then extract twice — ending with a 5-element heap standing,
+   so it can be replayed straight away. */
+const HEAP_DEMO_SCRIPT = [
+  { op: "insert", value: 50 }, { op: "insert", value: 30 },
+  { op: "insert", value: 70 }, { op: "insert", value: 20 },
+  { op: "insert", value: 40 }, { op: "insert", value: 60 },
+  { op: "insert", value: 80 },
+  { op: "peek" },
+  { op: "extract" },
+  { op: "extract" },
+];
+
+/* els: { treeStage, arrayStage, valueInput, modeSelect, insertBtn,
+          extractBtn, peekBtn, demoBtn, clearBtn, mode, size, height,
+          root, ops, status, log } — plain DOM elements. The factory
+   keeps no other state, so a node test can drive it with stub
+   elements. */
+function createHeapViz(els) {
+  let items = [];
+  let isMax = true;
+  let ops = 0;
+  let animating = false;
+  let demoTimer = null;
+  let demoRunning = false;
+  /* Bumped on clear / reset, so a bubble-up or sift-down left over
+     from the old heap stops instead of swapping into the new one. */
+  let opId = 0;
+  /* The pair a step is comparing: a is the node moving, b the node
+     it is measured against. */
+  let comparing = null;
+  let entering = null;
+  let flash = null;
+  /* The result of the most recent finished extract / peek, for tests. */
+  let lastExtract = null;
+  let lastPeek = null;
+
+  function parent(i) { return Math.floor((i - 1) / 2); }
+  function left(i) { return 2 * i + 1; }
+  function right(i) { return 2 * i + 2; }
+
+  function height() {
+    if (items.length === 0) return 0;
+    return Math.floor(Math.log2(items.length)) + 1;
+  }
+
+  /* True when a should sit above b: larger in a max-heap, smaller in
+     a min-heap. */
+  function better(a, b) {
+    return isMax ? a > b : a < b;
+  }
+
+  function modeName() {
+    return isMax ? "Max-heap" : "Min-heap";
+  }
+
+  function extremeWord() {
+    return isMax ? "largest" : "smallest";
+  }
+
+  function swap(i, j) {
+    const tmp = items[i];
+    items[i] = items[j];
+    items[j] = tmp;
+  }
+
+  /* Synchronous sift-down, used by the mode switch: re-heapify the
+     current values bottom-up, leaves already satisfying the heap
+     property, so the whole rebuild is O(n). */
+  function siftDownSync(i) {
+    for (;;) {
+      const l = left(i);
+      const r = right(i);
+      let best = i;
+      if (l < items.length && better(items[l], items[best])) best = l;
+      if (r < items.length && better(items[r], items[best])) best = r;
+      if (best === i) return;
+      swap(i, best);
+      i = best;
+    }
+  }
+
+  /* A complete tree: level d holds 2^d nodes, and node i sits in the
+     slot (i - (2^d - 1)) of its level, centred across the canvas. */
+  function layout(width) {
+    const positions = new Map();
+    const levels = height();
+    items.forEach((value, i) => {
+      const depth = Math.floor(Math.log2(i + 1));
+      const levelStart = Math.pow(2, depth) - 1;
+      const slots = Math.pow(2, depth);
+      const slot = i - levelStart;
+      positions.set(i, {
+        x: HEAP_TOP_PAD + ((slot + 0.5) * (width - 2 * HEAP_TOP_PAD)) / slots,
+        y: HEAP_TOP_PAD + depth * HEAP_ROW_HEIGHT,
+        depth,
+      });
+    });
+    return { positions, levels };
+  }
+
+  function render() {
+    /* Tree view. */
+    els.treeStage.innerHTML = "";
+    const canvas = document.createElement("div");
+    canvas.className = "heap-canvas";
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "heap-empty";
+      empty.textContent = "— empty —";
+      canvas.appendChild(empty);
+    } else {
+      const levels = height();
+      const width = HEAP_TOP_PAD * 2 + Math.pow(2, levels - 1) * HEAP_SLOT_WIDTH;
+      const canvasHeight = HEAP_TOP_PAD * 2 + (levels - 1) * HEAP_ROW_HEIGHT + HEAP_NODE_SIZE;
+      const { positions } = layout(width);
+      canvas.style.width = width + "px";
+      canvas.style.height = canvasHeight + "px";
+      /* Edges first, so nodes draw on top of them. */
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "heap-edges");
+      svg.setAttribute("width", String(width));
+      svg.setAttribute("height", String(canvasHeight));
+      for (let i = 1; i < items.length; i++) {
+        const p = positions.get(parent(i));
+        const c = positions.get(i);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", String(p.x));
+        line.setAttribute("y1", String(p.y + HEAP_NODE_SIZE));
+        line.setAttribute("x2", String(c.x));
+        line.setAttribute("y2", String(c.y));
+        svg.appendChild(line);
+      }
+      canvas.appendChild(svg);
+      positions.forEach((pos, i) => {
+        const box = document.createElement("div");
+        box.className = "heap-node";
+        box.textContent = String(items[i]);
+        if (i === 0) box.classList.add("root");
+        if (comparing !== null && i === comparing.a) box.classList.add("current");
+        if (comparing !== null && i === comparing.b) box.classList.add("visited");
+        if (i === entering) box.classList.add("entering");
+        if (i === flash) box.classList.add("peek");
+        box.style.left = (pos.x - HEAP_NODE_SIZE / 2) + "px";
+        box.style.top = pos.y + "px";
+        canvas.appendChild(box);
+      });
+    }
+    els.treeStage.appendChild(canvas);
+
+    /* Array view: the same heap as a row of indexed cells, so the
+       parent / child arithmetic reads off the positions. */
+    els.arrayStage.innerHTML = "";
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "heap-empty";
+      empty.textContent = "— empty —";
+      els.arrayStage.appendChild(empty);
+    } else {
+      items.forEach((value, i) => {
+        const cell = document.createElement("div");
+        cell.className = "heap-cell";
+        if (i === 0) cell.classList.add("root");
+        if (comparing !== null && i === comparing.a) cell.classList.add("current");
+        if (comparing !== null && i === comparing.b) cell.classList.add("visited");
+        if (i === entering) cell.classList.add("entering");
+        if (i === flash) cell.classList.add("peek");
+        const index = document.createElement("span");
+        index.className = "heap-index";
+        index.textContent = String(i);
+        const val = document.createElement("span");
+        val.className = "heap-value";
+        val.textContent = String(value);
+        cell.appendChild(index);
+        cell.appendChild(val);
+        els.arrayStage.appendChild(cell);
+      });
+    }
+
+    els.mode.textContent = modeName();
+    els.size.textContent = String(items.length);
+    els.height.textContent = items.length === 0 ? "—" : String(height());
+    els.root.textContent = items.length === 0 ? "—" : String(items[0]);
+    els.ops.textContent = String(ops);
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > HEAP_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.insertBtn, els.extractBtn, els.peekBtn, els.modeSelect,
+     els.demoBtn, els.clearBtn]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function validValue(value) {
+    return Number.isInteger(value) && value >= 0 && value <= HEAP_MAX_VALUE;
+  }
+
+  /* done fires when the animation settles, so the demo can chain the
+     next step after this one instead of guessing how long it takes. */
+  function insert(value, done) {
+    if (animating) return false;
+    if (!validValue(value)) {
+      setStatus(`Enter a whole number between 0 and ${HEAP_MAX_VALUE}.`);
+      return false;
+    }
+    if (items.length >= HEAP_MAX_NODES) {
+      setStatus(`The heap is full — ${HEAP_MAX_NODES} nodes is all the canvas fits. Clear it to start over.`);
+      return false;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    items.push(value);
+    ops++;
+    const id = ++opId;
+    let i = items.length - 1;
+    let swaps = 0;
+    entering = i;
+    comparing = null;
+    render();
+    setStatus(`Inserted ${value} at index ${i} — now bubbling it up…`);
+    log(`insert ${value} -> index ${i}`);
+    const finish = () => {
+      comparing = null;
+      entering = null;
+      animating = false;
+      setButtonsDisabled(false);
+      render();
+      setStatus(i === 0 && swaps === 0
+        ? `${value} is the first element — it is the root.`
+        : swaps === 0
+          ? `${value} stays at index ${i} — it does not beat its parent, so the heap is already valid.`
+          : `${value} bubbled up to index ${i} in ${swaps} swap${swaps === 1 ? "" : "s"} — root is now ${items[0]}.`);
+      if (done) done();
+    };
+    const step = () => {
+      if (id !== opId) return;
+      if (i === 0) {
+        finish();
+        return;
+      }
+      const p = parent(i);
+      comparing = { a: i, b: p };
+      render();
+      if (better(items[i], items[p])) {
+        setStatus(`${items[i]} beats its parent ${items[p]} at index ${p} — swapping them.`);
+        swap(i, p);
+        swaps++;
+        comparing = { a: p, b: i };
+        i = p;
+        render();
+        setTimeout(step, HEAP_STEP_MS);
+      } else {
+        setStatus(`${items[i]} does not beat its parent ${items[p]} — it stays at index ${i}.`);
+        finish();
+      }
+    };
+    setTimeout(step, HEAP_STEP_MS);
+    return true;
+  }
+
+  function extract(done) {
+    if (animating) return null;
+    if (items.length === 0) {
+      setStatus("Heap is empty — nothing to extract.");
+      return null;
+    }
+    animating = true;
+    setButtonsDisabled(true);
+    const value = items[0];
+    lastExtract = value;
+    ops++;
+    const id = ++opId;
+    let swaps = 0;
+    if (items.length === 1) {
+      items = [];
+      comparing = null;
+      entering = null;
+      animating = false;
+      setButtonsDisabled(false);
+      render();
+      setStatus(`Extracted ${value} — that was the only element, the heap is empty now.`);
+      log(`extract -> ${value} (heap empty)`);
+      if (done) done();
+      return value;
+    }
+    items[0] = items.pop();
+    let i = 0;
+    entering = 0;
+    comparing = null;
+    render();
+    setStatus(`Extracted ${value} — moved the last element ${items[0]} to the root, now sifting it down…`);
+    log(`extract -> ${value} (size ${items.length})`);
+    const finish = () => {
+      comparing = null;
+      entering = null;
+      animating = false;
+      setButtonsDisabled(false);
+      render();
+      setStatus(swaps === 0
+        ? `${value} extracted — ${items[0]} already beats both children, so it stays at the root.`
+        : `${value} extracted — the replacement settled at index ${i} after ${swaps} swap${swaps === 1 ? "" : "s"}, root is now ${items[0]}.`);
+      if (done) done();
+    };
+    const step = () => {
+      if (id !== opId) return;
+      const l = left(i);
+      const r = right(i);
+      let best = i;
+      if (l < items.length && better(items[l], items[best])) best = l;
+      if (r < items.length && better(items[r], items[best])) best = r;
+      if (best === i) {
+        finish();
+        return;
+      }
+      comparing = { a: i, b: best };
+      render();
+      setStatus(`${items[i]} loses to its ${extremeWord()} child ${items[best]} at index ${best} — swapping them.`);
+      swap(i, best);
+      swaps++;
+      comparing = { a: best, b: i };
+      i = best;
+      render();
+      setTimeout(step, HEAP_STEP_MS);
+    };
+    setTimeout(step, HEAP_STEP_MS);
+    return value;
+  }
+
+  function peek() {
+    if (animating) return null;
+    if (items.length === 0) {
+      setStatus("Heap is empty — nothing to peek at.");
+      return null;
+    }
+    ops++;
+    const value = items[0];
+    lastPeek = value;
+    flash = 0;
+    render();
+    setStatus(`Root is ${value} — the ${extremeWord()} value in this ${modeName().toLowerCase()}; peek only looks, the heap is unchanged.`);
+    log(`peek -> ${value} (size ${items.length})`);
+    setTimeout(() => { flash = null; render(); }, HEAP_FLASH_MS);
+    return value;
+  }
+
+  /* Flips which value wins and re-heapifies the values already in
+     the heap, so the same numbers come out in the opposite order. */
+  function setMode(max) {
+    if (animating) return false;
+    if (max === isMax) return false;
+    isMax = max;
+    for (let i = parent(items.length - 1); i >= 0; i--) siftDownSync(i);
+    ops++;
+    comparing = null;
+    entering = null;
+    flash = null;
+    els.modeSelect.value = isMax ? "max" : "min";
+    render();
+    setStatus(`Switched to ${modeName()} — the same ${items.length} value${items.length === 1 ? "" : "s"} re-heapified`
+      + (items.length === 0 ? "." : `, root is now ${items[0]}.`));
+    log(`mode -> ${modeName().toLowerCase()}`
+      + (items.length === 0 ? "" : ` (root ${items[0]})`));
+    return true;
+  }
+
+  function clear() {
+    if (animating) return;
+    stopDemo();
+    opId++;
+    items = [];
+    comparing = null;
+    entering = null;
+    flash = null;
+    render();
+    setStatus("Heap cleared.");
+    log("clear -> heap is empty");
+  }
+
+  function stopDemo() {
+    if (demoTimer !== null) {
+      clearTimeout(demoTimer);
+      demoTimer = null;
+    }
+    demoRunning = false;
+    els.demoBtn.disabled = false;
+  }
+
+  /* Runs the scripted story one step at a time. Each insert and
+     extract reports back when its animation settles, so the next
+     step starts on time instead of on a guess. */
+  function demo() {
+    if (demoRunning || animating) return false;
+    clear();
+    demoRunning = true;
+    els.demoBtn.disabled = true;
+    setStatus("Demo running — building a max-heap from 50, 30, 70, 20, 40, 60, 80…");
+    let step = 0;
+    const next = () => { demoTimer = setTimeout(runStep, HEAP_DEMO_STEP_MS); };
+    const runStep = () => {
+      if (step >= HEAP_DEMO_SCRIPT.length) {
+        stopDemo();
+        setStatus(`Demo finished — root is ${items.length === 0 ? "—" : items[0]} after two extracts. Insert your own values, or run it again.`);
+        return;
+      }
+      const action = HEAP_DEMO_SCRIPT[step];
+      step++;
+      if (action.op === "insert") insert(action.value, next);
+      else if (action.op === "extract") extract(next);
+      else if (action.op === "peek") { peek(); next(); }
+    };
+    demoTimer = setTimeout(runStep, HEAP_DEMO_STEP_MS);
+    return true;
+  }
+
+  function reset() {
+    stopDemo();
+    opId++;
+    items = [];
+    isMax = true;
+    ops = 0;
+    animating = false;
+    comparing = null;
+    entering = null;
+    flash = null;
+    lastExtract = null;
+    lastPeek = null;
+    setButtonsDisabled(false);
+    els.modeSelect.value = "max";
+    render();
+    els.log.innerHTML = "";
+    setStatus("Heap is empty — insert a value to start.");
+  }
+
+  function readValueInput() {
+    const n = parseInt(els.valueInput.value, 10);
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  els.insertBtn.addEventListener("click", () => insert(readValueInput()));
+  els.extractBtn.addEventListener("click", () => extract());
+  els.peekBtn.addEventListener("click", () => peek());
+  els.modeSelect.addEventListener("change", () => setMode(els.modeSelect.value === "max"));
+  els.demoBtn.addEventListener("click", () => demo());
+  els.clearBtn.addEventListener("click", () => clear());
+  els.valueInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") insert(readValueInput());
+  });
+
+  render();
+  setStatus("Heap is empty — insert a value to start.");
+  return {
+    insert, extract, peek, setMode, clear, demo, reset, stopDemo,
+    get size() { return items.length; },
+    get root() { return items.length === 0 ? null : items[0]; },
+    get operations() { return ops; },
+    get items() { return items.slice(); },
+    get isMax() { return isMax; },
+    get demoRunning() { return demoRunning; },
+    get lastExtract() { return lastExtract; },
+    get lastPeek() { return lastPeek; },
+  };
+}
+
+/* Wires the heap panel in index.html; called once from app.js. */
+function initHeapViz() {
+  const $ = (id) => document.getElementById(id);
+  return createHeapViz({
+    treeStage: $("heapTreeStage"),
+    arrayStage: $("heapArrayStage"),
+    valueInput: $("heapValueInput"),
+    modeSelect: $("heapModeSelect"),
+    insertBtn: $("insertHeapBtn"),
+    extractBtn: $("extractHeapBtn"),
+    peekBtn: $("peekHeapBtn"),
+    demoBtn: $("demoHeapBtn"),
+    clearBtn: $("clearHeapBtn"),
+    mode: $("heapMode"),
+    size: $("heapSize"),
+    height: $("heapHeight"),
+    root: $("heapRoot"),
+    ops: $("heapOps"),
+    status: $("heapStatus"),
+    log: $("heapLog"),
+  });
+}

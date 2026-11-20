@@ -8,7 +8,7 @@ const ALGO_NAMES = {
   linear: "Linear Search", binary: "Binary Search",
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
-  avl: "AVL Tree", hashtable: "Hash Table",
+  avl: "AVL Tree", hashtable: "Hash Table", heapviz: "Heap",
 };
 
 const player = new Player($("stage"), {
@@ -35,6 +35,7 @@ const doublyLinkedListViz = initDoublyLinkedListViz();
 const bstViz = initBstViz();
 const avlViz = initAvlViz();
 const hashViz = initHashViz();
+const heapViz = initHeapViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -170,7 +171,8 @@ function build() {
   const isBst = algo === "bst";
   const isAvl = algo === "avl";
   const isHash = algo === "hashtable";
-  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash;
+  const isHeap = algo === "heapviz";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -185,6 +187,7 @@ function build() {
   $("bstPanel").hidden = !isBst;
   $("avlPanel").hidden = !isAvl;
   $("hashPanel").hidden = !isHash;
+  $("heapPanel").hidden = !isHeap;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -289,6 +292,21 @@ function build() {
     player.stop();
     playerB.stop();
     hashViz.reset();
+    return;
+  }
+
+  if (isHeap) {
+    pseudoLines = HEAP_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = HEAP_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), HEAP_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    heapViz.reset();
     return;
   }
 

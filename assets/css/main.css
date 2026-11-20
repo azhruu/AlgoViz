@@ -263,3 +263,41 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .hash-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .hash-log li::before{content:"▸ ";color:var(--accent2)}
 @keyframes hashIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+
+/* Heap visualizer — the same complete binary tree twice: circles on a
+   canvas (laid out by level, joined by SVG edges) and a row of
+   indexed array cells underneath, so the parent / child arithmetic
+   reads off both. The node moving in a bubble-up or sift-down glows
+   gold; the node it is measured against keeps a teal outline; the
+   root carries a ROOT label and a peek flashes it green. */
+.heap-panel{margin-top:20px}
+.heap-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.heap-view-label{font-size:13px;color:var(--muted);margin:14px 0 8px;font-weight:700}
+.heap-view-label:first-child{margin-top:0}
+.heap-stage{min-height:300px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px;overflow-x:auto}
+.heap-canvas{position:relative;margin:0 auto}
+.heap-edges{position:absolute;left:0;top:0;overflow:visible}
+.heap-edges line{stroke:#3b4a7d;stroke-width:2}
+.heap-node{position:absolute;width:52px;height:52px;border-radius:50%;background:var(--bar);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;z-index:2}
+.heap-node.root{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121a}
+.heap-node.root::before{content:"ROOT";position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent2)}
+.heap-node.entering{animation:bstIn .3s ease}
+.heap-node.current{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.8)}
+.heap-node.visited{box-shadow:0 0 0 2px var(--accent2)}
+.heap-node.peek{box-shadow:0 0 0 2px var(--sorted),0 0 18px rgba(56,224,200,.9)}
+.heap-empty{color:var(--muted);text-align:center;padding:20px 0;width:100%}
+.heap-array-stage{display:flex;flex-wrap:wrap;gap:8px;min-height:64px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px;align-items:center}
+.heap-cell{background:var(--bar);border-radius:8px;padding:6px 0 8px;text-align:center;font-weight:700;font-size:18px;min-width:56px;position:relative}
+.heap-cell .heap-index{display:block;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1px}
+.heap-cell.root{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121a}
+.heap-cell.root .heap-index{color:#06121a;opacity:.75}
+.heap-cell.entering{animation:bstIn .3s ease}
+.heap-cell.current{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.8)}
+.heap-cell.visited{box-shadow:0 0 0 2px var(--accent2)}
+.heap-cell.peek{box-shadow:0 0 0 2px var(--sorted),0 0 18px rgba(56,224,200,.9)}
+.heap-side{padding-top:4px}
+.heap-stats{color:var(--muted);font-size:14px}
+.heap-stats strong{color:var(--text);margin-left:6px}
+.heap-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.heap-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.heap-log li::before{content:"▸ ";color:var(--accent2)}

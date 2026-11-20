@@ -29,7 +29,7 @@ Tick items off as they land.
 - [x] BST traversals (inorder / preorder / postorder walk-through)
 - [x] AVL rotations (LL, RR, LR, RL) step animations
 - [x] Hash table: hash function + chaining collisions visualizer
-- [ ] Heap: min/max heap insert & extract with tree + array views
+- [x] Heap: min/max heap insert & extract with tree + array views
 
 ## Week 4 — Graphs, pathfinding & recursion
 - [ ] Graph canvas: BFS traversal animation
