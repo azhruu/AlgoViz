@@ -32,7 +32,7 @@ Tick items off as they land.
 - [x] Heap: min/max heap insert & extract with tree + array views
 
 ## Week 4 — Graphs, pathfinding & recursion
-- [ ] Graph canvas: BFS traversal animation
+- [x] Graph canvas: BFS traversal animation
 - [ ] Graph canvas: DFS traversal animation
 - [ ] Dijkstra shortest path on a weighted grid
 - [ ] A* pathfinding with draggable walls

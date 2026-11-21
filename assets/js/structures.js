@@ -3498,3 +3498,336 @@ function initHeapViz() {
     log: $("heapLog"),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Graph canvas — BFS traversal animation. A fixed 8-node sample      */
+/* graph (A–H) is drawn as circles joined by edges; BFS walks it     */
+/* level by level from the chosen start node, using a queue: the      */
+/* node being processed glows gold, nodes waiting in the queue are    */
+/* outlined purple, visited nodes keep a teal outline, and every     */
+/* edge BFS actually crosses lights up teal. The queue and the visit  */
+/* order are shown live in the side panel, so the FIFO order — the    */
+/* whole point of BFS — reads off the screen. Clicking a node picks   */
+/* it as the start node.                                              */
+/* ------------------------------------------------------------------ */
+
+const GRAPH_INFO = {
+  complexity: "O(V + E)",
+  cases: {
+    best: "O(V + E) — every node is dequeued once and every edge is checked once, whatever the shape",
+    average: "O(V + E) — same as best: BFS always visits the whole connected component",
+    worst: "O(V + E) — a dense graph checks every edge, but never twice",
+    note: "BFS visits nodes level by level: everything one hop from the start first, then two hops, and so on. That is why it finds the shortest path (fewest edges) in an unweighted graph — the first time a node is reached, it is reached by the shortest route.",
+  },
+  pseudocode:
+`bfs(start)            <- a queue, first in first out
+  queue = [start]
+  visited = {start}
+  while queue is not empty:
+    node = queue.dequeue()      <- front of the queue
+    visit(node)                 <- in visit order
+    for each neighbour of node:
+      if neighbour not visited:
+        visited.add(neighbour)
+        queue.enqueue(neighbour) <- back of the queue`,
+};
+
+/* Fixed sample graph: 8 nodes, 11 edges. Positions are the top-left
+   corner of each 52px node circle on a 760 x 310 canvas. */
+const GRAPH_NODE_SIZE = 52;
+const GRAPH_CANVAS_WIDTH = 760;
+const GRAPH_CANVAS_HEIGHT = 310;
+const GRAPH_NODES = {
+  A: { x: 70, y: 30 }, B: { x: 290, y: 20 }, C: { x: 70, y: 230 },
+  D: { x: 290, y: 220 }, E: { x: 500, y: 25 }, F: { x: 500, y: 225 },
+  G: { x: 680, y: 30 }, H: { x: 680, y: 230 },
+};
+const GRAPH_EDGES = [
+  ["A", "B"], ["A", "C"], ["B", "D"], ["B", "E"], ["C", "D"],
+  ["C", "F"], ["D", "H"], ["E", "F"], ["E", "G"], ["F", "H"], ["G", "H"],
+];
+const GRAPH_LOG_LIMIT = 8;
+/* Pause between steps, so each dequeue and enqueue reads step by step. */
+const GRAPH_STEP_MS = 650;
+const GRAPH_DEMO_START = "A";
+/* Shown in the side panel until the first BFS run. */
+const GRAPH_ORDER_PLACEHOLDER =
+  "No visit order yet — run BFS to walk the graph level by level.";
+const GRAPH_QUEUE_PLACEHOLDER = "Queue is empty.";
+const GRAPH_STATUS_PLACEHOLDER =
+  "Pick a start node, then run BFS — or press Demo to watch it from A.";
+
+/* Neighbours of every node, sorted, so the visit order is deterministic. */
+function graphAdjacency() {
+  const adj = {};
+  Object.keys(GRAPH_NODES).forEach((n) => { adj[n] = []; });
+  GRAPH_EDGES.forEach(([u, v]) => { adj[u].push(v); adj[v].push(u); });
+  Object.keys(adj).forEach((n) => adj[n].sort());
+  return adj;
+}
+
+/* Pure BFS: the visit order from `start`, with no DOM. The animated
+   visualizer steps through the same walk one dequeue at a time. */
+function bfsOrder(adjacency, start) {
+  const visited = new Set([start]);
+  const queue = [start];
+  const order = [];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    order.push(node);
+    (adjacency[node] || []).forEach((next) => {
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue.push(next);
+      }
+    });
+  }
+  return order;
+}
+
+/* els: { stage, startSelect, bfsBtn, stepBtn, demoBtn, resetBtn,
+          nodes, edges, visited, queueSize, steps, status, queueOutput,
+          orderOutput, log } — plain DOM elements. The factory keeps no
+   other state, so a node test can drive it with stub elements. */
+function createGraphViz(els) {
+  const adjacency = graphAdjacency();
+  let queue = [];
+  let visited = new Set();
+  let order = [];
+  let treeEdges = new Set();
+  let current = null;
+  let steps = 0;
+  let start = GRAPH_DEMO_START;
+  let started = false;
+  let finished = false;
+  let running = false;
+  let timer = null;
+
+  function edgeKey(u, v) {
+    return [u, v].sort().join("-");
+  }
+
+  function centre(node) {
+    const p = GRAPH_NODES[node];
+    return { x: p.x + GRAPH_NODE_SIZE / 2, y: p.y + GRAPH_NODE_SIZE / 2 };
+  }
+
+  function render() {
+    els.stage.innerHTML = "";
+    const canvas = document.createElement("div");
+    canvas.className = "graph-canvas";
+    canvas.style.width = GRAPH_CANVAS_WIDTH + "px";
+    canvas.style.height = GRAPH_CANVAS_HEIGHT + "px";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "graph-edges");
+    svg.setAttribute("width", GRAPH_CANVAS_WIDTH);
+    svg.setAttribute("height", GRAPH_CANVAS_HEIGHT);
+    GRAPH_EDGES.forEach(([u, v]) => {
+      const a = centre(u);
+      const b = centre(v);
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", a.x);
+      line.setAttribute("y1", a.y);
+      line.setAttribute("x2", b.x);
+      line.setAttribute("y2", b.y);
+      if (treeEdges.has(edgeKey(u, v))) line.setAttribute("class", "traversed");
+      svg.appendChild(line);
+    });
+    canvas.appendChild(svg);
+    Object.keys(GRAPH_NODES).forEach((label) => {
+      const p = GRAPH_NODES[label];
+      const node = document.createElement("div");
+      node.className = "graph-node";
+      node.style.left = p.x + "px";
+      node.style.top = p.y + "px";
+      node.textContent = label;
+      if (label === start) node.classList.add("start");
+      if (label === current) node.classList.add("current");
+      else if (visited.has(label)) node.classList.add("visited");
+      else if (queue.includes(label)) node.classList.add("queued");
+      node.addEventListener("click", () => setStart(label));
+      canvas.appendChild(node);
+    });
+    els.stage.appendChild(canvas);
+
+    els.nodes.textContent = Object.keys(GRAPH_NODES).length;
+    els.edges.textContent = GRAPH_EDGES.length;
+    els.visited.textContent = order.length;
+    els.queueSize.textContent = queue.length;
+    els.steps.textContent = steps;
+    els.queueOutput.textContent = queue.length === 0
+      ? GRAPH_QUEUE_PLACEHOLDER
+      : "Queue (front → back): " + queue.join(" → ");
+    els.orderOutput.textContent = order.length === 0
+      ? GRAPH_ORDER_PLACEHOLDER
+      : "Visit order: " + order.join(" → ");
+  }
+
+  function setStatus(text) {
+    els.status.textContent = text;
+  }
+
+  function logLine(text) {
+    const entry = document.createElement("li");
+    entry.textContent = text;
+    els.log.appendChild(entry);
+    while (els.log.children.length > GRAPH_LOG_LIMIT)
+      els.log.removeChild(els.log.firstChild);
+  }
+
+  function setButtonsDisabled(disabled) {
+    els.bfsBtn.disabled = disabled;
+    els.stepBtn.disabled = disabled;
+    els.demoBtn.disabled = disabled;
+  }
+
+  function stopRun() {
+    running = false;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    setButtonsDisabled(false);
+  }
+
+  function finish() {
+    finished = true;
+    stopRun();
+    current = null;
+    render();
+    setStatus(`BFS complete — visited all ${order.length} nodes in ${steps} steps. `
+      + `Visit order: ${order.join(" → ")}.`);
+    logLine("BFS complete — every node reached.");
+  }
+
+  /* One BFS step: enqueue the start on the first call, then dequeue
+     the front node, visit it, and enqueue its unvisited neighbours.
+     Returns false when the walk is finished. */
+  function stepBfs() {
+    if (finished) return false;
+    if (!started) {
+      started = true;
+      queue = [start];
+      visited = new Set([start]);
+      setStatus(`Start at ${start} — enqueue ${start}.`);
+      logLine(`Start at ${start} — enqueue ${start}.`);
+      render();
+      return true;
+    }
+    if (queue.length === 0) {
+      finish();
+      return false;
+    }
+    const node = queue.shift();
+    current = node;
+    order.push(node);
+    steps++;
+    const enqueued = [];
+    adjacency[node].forEach((next) => {
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue.push(next);
+        treeEdges.add(edgeKey(node, next));
+        enqueued.push(next);
+      }
+    });
+    setStatus(enqueued.length > 0
+      ? `Visit ${node} — dequeue it, enqueue ${enqueued.join(", ")}.`
+      : `Visit ${node} — dequeue it, no new neighbours.`);
+    logLine(`Visit ${node} — dequeue, ${queue.length} left in queue.`);
+    enqueued.forEach((next) => logLine(`Enqueue ${next} (neighbour of ${node}).`));
+    render();
+    if (queue.length === 0) {
+      finish();
+      return false;
+    }
+    return true;
+  }
+
+  function runBfs() {
+    if (running) return;
+    if (finished) reset();
+    running = true;
+    setButtonsDisabled(true);
+    const tick = () => {
+      if (!running) return;
+      if (stepBfs()) timer = setTimeout(tick, GRAPH_STEP_MS);
+    };
+    tick();
+  }
+
+  function demo() {
+    reset();
+    els.startSelect.value = GRAPH_DEMO_START;
+    start = GRAPH_DEMO_START;
+    render();
+    runBfs();
+  }
+
+  function setStart(label) {
+    if (running || !Object.prototype.hasOwnProperty.call(GRAPH_NODES, label)) return;
+    start = label;
+    els.startSelect.value = label;
+    reset();
+    setStatus(`Start node is ${label} — run BFS to walk from here.`);
+  }
+
+  function reset() {
+    stopRun();
+    queue = [];
+    visited = new Set();
+    order = [];
+    treeEdges = new Set();
+    current = null;
+    steps = 0;
+    started = false;
+    finished = false;
+    start = els.startSelect.value;
+    render();
+    els.log.innerHTML = "";
+    setStatus(GRAPH_STATUS_PLACEHOLDER);
+  }
+
+  els.bfsBtn.addEventListener("click", runBfs);
+  els.stepBtn.addEventListener("click", () => {
+    if (running) return;
+    if (finished) reset();
+    stepBfs();
+  });
+  els.demoBtn.addEventListener("click", demo);
+  els.resetBtn.addEventListener("click", reset);
+  els.startSelect.addEventListener("change", (e) => setStart(e.target.value));
+
+  render();
+  setStatus(GRAPH_STATUS_PLACEHOLDER);
+  return {
+    bfs: runBfs, step: stepBfs, demo, reset, setStart, stopRun,
+    get order() { return order.slice(); },
+    get visitedCount() { return order.length; },
+    get queueLength() { return queue.length; },
+    get steps() { return steps; },
+    get running() { return running; },
+    get finished() { return finished; },
+    get start() { return start; },
+  };
+}
+
+/* Wires the graph panel in index.html; called once from app.js. */
+function initGraphViz() {
+  const $ = (id) => document.getElementById(id);
+  return createGraphViz({
+    stage: $("graphStage"),
+    startSelect: $("graphStartSelect"),
+    bfsBtn: $("bfsBtn"),
+    stepBtn: $("graphStepBtn"),
+    demoBtn: $("demoGraphBtn"),
+    resetBtn: $("resetGraphBtn"),
+    nodes: $("graphNodes"),
+    edges: $("graphEdges"),
+    visited: $("graphVisited"),
+    queueSize: $("graphQueueSize"),
+    steps: $("graphSteps"),
+    status: $("graphStatus"),
+    queueOutput: $("graphQueueOutput"),
+    orderOutput: $("graphOrderOutput"),
+    log: $("graphLog"),
+  });
+}

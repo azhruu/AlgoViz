@@ -9,6 +9,7 @@ const ALGO_NAMES = {
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
   avl: "AVL Tree", hashtable: "Hash Table", heapviz: "Heap",
+  graph: "Graph BFS",
 };
 
 const player = new Player($("stage"), {
@@ -36,6 +37,7 @@ const bstViz = initBstViz();
 const avlViz = initAvlViz();
 const hashViz = initHashViz();
 const heapViz = initHeapViz();
+const graphViz = initGraphViz();
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -172,7 +174,8 @@ function build() {
   const isAvl = algo === "avl";
   const isHash = algo === "hashtable";
   const isHeap = algo === "heapviz";
-  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap;
+  const isGraph = algo === "graph";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap || isGraph;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -188,6 +191,7 @@ function build() {
   $("avlPanel").hidden = !isAvl;
   $("hashPanel").hidden = !isHash;
   $("heapPanel").hidden = !isHeap;
+  $("graphPanel").hidden = !isGraph;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -307,6 +311,21 @@ function build() {
     player.stop();
     playerB.stop();
     heapViz.reset();
+    return;
+  }
+
+  if (isGraph) {
+    pseudoLines = GRAPH_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = GRAPH_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), GRAPH_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    graphViz.reset();
     return;
   }
 
