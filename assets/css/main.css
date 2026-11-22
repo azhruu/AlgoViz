@@ -226,6 +226,7 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .graph-node.start{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121a}
 .graph-node.start::before{content:"START";position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent2)}
 .graph-node.queued{box-shadow:0 0 0 2px var(--pivot)}
+.graph-node.stacked{box-shadow:0 0 0 2px var(--pivot)}
 .graph-node.current{box-shadow:0 0 0 2px var(--compare),0 0 18px rgba(255,209,102,.8)}
 .graph-node.visited{box-shadow:0 0 0 2px var(--accent2)}
 .graph-side{padding-top:4px}

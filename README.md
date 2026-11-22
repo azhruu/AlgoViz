@@ -30,6 +30,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🔑 **Hash table visualizer** — keys hash into 8 buckets with h(key) = key mod 8, shown live in the formula line; keys that collide chain up in the same bucket with arrows, the colliding bucket lights up gold, and the panel tracks size, load factor and a running collision count; insert, search and delete, plus a scripted demo that builds a 3-long collision chain in bucket 2, finds 18 mid-chain, collides 5 and 13 in bucket 5, then deletes 18
 - ⛰️ **Heap visualizer** — min-heap and max-heap on the same panel, shown twice at once: a tree view of circles joined by edges and an array view of indexed cells, so parent (i − 1) / 2 and children 2i + 1 / 2i + 2 read off both; insert bubbles up and extract sifts down one swap at a time with the moving node lit up, peek flashes the root, switching min/max re-heapifies the same values in place, plus a scripted demo that builds a max-heap from 50 / 30 / 70 / 20 / 40 / 60 / 80, peeks at 80 and extracts twice
 - 🕸️ **Graph BFS visualizer** — an 8-node graph (A–H, 11 edges) on a node canvas; BFS walks it level by level from any start node you pick (click a node or use the dropdown), with the node being processed glowing gold, queued nodes outlined purple, visited nodes outlined teal, every edge BFS crosses lit up teal, and the queue and visit order shown live in the side panel; run it animated, step by step, or with a scripted demo from A (visit order A → B → C → D → E → F → H → G)
+- 🕸️ **Graph DFS visualizer** — the same 8-node graph with a traversal switch: DFS dives deep down one branch on a stack instead of walking level by level, neighbours pushed in reverse order so the smallest is visited first, with the stack (top first) and visit order shown live in the side panel; run it animated, step by step, or with a scripted demo from A (visit order A → B → D → H → F → G → E → C)
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -39,11 +40,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 | Sorting | Bubble · Selection · Insertion · Merge · Quick · Heap |
 | Searching | Linear · Binary |
 | Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas, inorder / preorder / postorder traversals) · AVL Tree (self-balancing insert, balance-factor badges, LL / RR / LR / RL rotation animations) · Hash Table (insert / search / delete, h(key) = key mod 8, chaining collisions, load factor + collision count) · Heap (min/max insert & extract, tree + array views, mode switch re-heapifies) |
-| Graphs | BFS (level-by-level walk on an 8-node graph, live queue + visit order, any start node) |
+| Graphs | BFS (level-by-level walk on an 8-node graph, live queue + visit order, any start node) · DFS (deep-first walk on the same graph, live stack + visit order, any start node) |
 
 ## Roadmap
 
-Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing ✓ → Heap ✓ → BFS ✓ → DFS → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing ✓ → Heap ✓ → BFS ✓ → DFS ✓ → Dijkstra & A* → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
@@ -64,7 +65,7 @@ AlgoViz/
 │       ├── visualizer.js # playback engine (frames, play/pause/step)
 │       ├── sorting.js    # sorting algorithm frame-generators
 │       ├── searching.js  # searching algorithm frame-generators
-│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST, AVL, hash table, heap, graph BFS)
+│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST, AVL, hash table, heap, graph BFS / DFS)
 │       └── app.js        # UI wiring
 ├── ROADMAP.md            # day-by-day build plan
 └── LICENSE               # MIT

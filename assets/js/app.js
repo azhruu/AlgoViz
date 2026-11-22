@@ -9,7 +9,7 @@ const ALGO_NAMES = {
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
   avl: "AVL Tree", hashtable: "Hash Table", heapviz: "Heap",
-  graph: "Graph BFS",
+  graph: "Graph BFS / DFS",
 };
 
 const player = new Player($("stage"), {
@@ -38,6 +38,15 @@ const avlViz = initAvlViz();
 const hashViz = initHashViz();
 const heapViz = initHeapViz();
 const graphViz = initGraphViz();
+/* Switching BFS / DFS swaps the pseudocode and case notes to match
+   the selected traversal — but only while the graph panel is showing. */
+graphViz.onModeChange = () => {
+  if ($("algoSelect").value !== "graph") return;
+  const info = graphViz.info;
+  pseudoLines = info.pseudocode.split("\n");
+  $("pseudocode").textContent = info.pseudocode;
+  renderCaseNotes($("caseNotes"), info.cases);
+};
 
 let pseudoLines = [];
 let pseudoLinesB = [];
@@ -315,9 +324,10 @@ function build() {
   }
 
   if (isGraph) {
-    pseudoLines = GRAPH_INFO.pseudocode.split("\n");
-    $("pseudocode").textContent = GRAPH_INFO.pseudocode;
-    renderCaseNotes($("caseNotes"), GRAPH_INFO.cases);
+    const info = graphViz.info;
+    pseudoLines = info.pseudocode.split("\n");
+    $("pseudocode").textContent = info.pseudocode;
+    renderCaseNotes($("caseNotes"), info.cases);
     raceDeclared = false;
     $("raceResult").hidden = true;
     $("raceResult").textContent = "";

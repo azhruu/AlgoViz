@@ -33,7 +33,7 @@ Tick items off as they land.
 
 ## Week 4 — Graphs, pathfinding & recursion
 - [x] Graph canvas: BFS traversal animation
-- [ ] Graph canvas: DFS traversal animation
+- [x] Graph canvas: DFS traversal animation
 - [ ] Dijkstra shortest path on a weighted grid
 - [ ] A* pathfinding with draggable walls
 - [ ] Tower of Hanoi animation

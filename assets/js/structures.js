@@ -3502,13 +3502,15 @@ function initHeapViz() {
 /* ------------------------------------------------------------------ */
 /* Graph canvas — BFS traversal animation. A fixed 8-node sample      */
 /* graph (A–H) is drawn as circles joined by edges; BFS walks it     */
-/* level by level from the chosen start node, using a queue: the      */
-/* node being processed glows gold, nodes waiting in the queue are    */
+/* level by level from the chosen start node, using a queue, and DFS   */
+/* dives down one branch at a time, using a stack. The node being     */
+/* processed glows gold, nodes waiting in the queue / stack are       */
 /* outlined purple, visited nodes keep a teal outline, and every     */
-/* edge BFS actually crosses lights up teal. The queue and the visit  */
-/* order are shown live in the side panel, so the FIFO order — the    */
-/* whole point of BFS — reads off the screen. Clicking a node picks   */
-/* it as the start node.                                              */
+/* edge the walk actually crosses lights up teal. The queue / stack   */
+/* and the visit order are shown live in the side panel, so the FIFO  */
+/* order — the whole point of BFS — and the LIFO order — the whole    */
+/* point of DFS — read off the screen. Clicking a node picks it as    */
+/* the start node.                                                    */
 /* ------------------------------------------------------------------ */
 
 const GRAPH_INFO = {
@@ -3532,6 +3534,29 @@ const GRAPH_INFO = {
         queue.enqueue(neighbour) <- back of the queue`,
 };
 
+/* DFS on the same graph and the same panel: the stack replaces the
+   queue, so the walk dives down one branch before backtracking. */
+const GRAPH_DFS_INFO = {
+  complexity: "O(V + E)",
+  cases: {
+    best: "O(V + E) — every node is popped once and every edge is checked once, whatever the shape",
+    average: "O(V + E) — same as best: DFS always visits the whole connected component",
+    worst: "O(V + E) — a dense graph checks every edge, but never twice",
+    note: "DFS dives deep first: from the start it follows one branch as far as it goes, backtracks, then tries the next branch. That makes it the tool for cycle detection and topological sort — but unlike BFS it does not find shortest paths. This version is iterative: neighbours are pushed in reverse order, so the smallest neighbour ends up on top of the stack and is visited first.",
+  },
+  pseudocode:
+`dfs(start)            <- a stack, last in first out
+  stack = [start]
+  visited = {start}
+  while stack is not empty:
+    node = stack.pop()          <- top of the stack
+    visit(node)                 <- in visit order
+    for each neighbour of node, in reverse order:
+      if neighbour not visited:
+        visited.add(neighbour)
+        stack.push(neighbour)   <- top of the stack`,
+};
+
 /* Fixed sample graph: 8 nodes, 11 edges. Positions are the top-left
    corner of each 52px node circle on a 760 x 310 canvas. */
 const GRAPH_NODE_SIZE = 52;
@@ -3553,9 +3578,14 @@ const GRAPH_DEMO_START = "A";
 /* Shown in the side panel until the first BFS run. */
 const GRAPH_ORDER_PLACEHOLDER =
   "No visit order yet — run BFS to walk the graph level by level.";
+const GRAPH_DFS_ORDER_PLACEHOLDER =
+  "No visit order yet — run DFS to dive deep from the start node.";
 const GRAPH_QUEUE_PLACEHOLDER = "Queue is empty.";
+const GRAPH_STACK_PLACEHOLDER = "Stack is empty.";
 const GRAPH_STATUS_PLACEHOLDER =
   "Pick a start node, then run BFS — or press Demo to watch it from A.";
+const GRAPH_DFS_STATUS_PLACEHOLDER =
+  "Pick a start node, then run DFS — or press Demo to watch it from A.";
 
 /* Neighbours of every node, sorted, so the visit order is deterministic. */
 function graphAdjacency() {
@@ -3585,23 +3615,71 @@ function bfsOrder(adjacency, start) {
   return order;
 }
 
-/* els: { stage, startSelect, bfsBtn, stepBtn, demoBtn, resetBtn,
-          nodes, edges, visited, queueSize, steps, status, queueOutput,
-          orderOutput, log } — plain DOM elements. The factory keeps no
-   other state, so a node test can drive it with stub elements. */
+/* Pure DFS: the visit order from `start`, with no DOM. Iterative, on
+   a stack: neighbours are pushed in reverse sorted order, so the
+   smallest neighbour ends up on top and is visited first. The
+   animated visualizer steps through the same walk one pop at a time. */
+function dfsOrder(adjacency, start) {
+  const visited = new Set([start]);
+  const stack = [start];
+  const order = [];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    order.push(node);
+    [...(adjacency[node] || [])].reverse().forEach((next) => {
+      if (!visited.has(next)) {
+        visited.add(next);
+        stack.push(next);
+      }
+    });
+  }
+  return order;
+}
+
+/* els: { stage, startSelect, traversalSelect, runBtn, stepBtn, demoBtn,
+          resetBtn, nodes, edges, visited, waitingLabel, queueSize, steps,
+          status, queueOutput, orderOutput, log } — plain DOM elements.
+   The factory keeps no other state, so a node test can drive it with
+   stub elements. */
 function createGraphViz(els) {
   const adjacency = graphAdjacency();
   let queue = [];
+  let stack = [];
   let visited = new Set();
   let order = [];
   let treeEdges = new Set();
   let current = null;
   let steps = 0;
   let start = GRAPH_DEMO_START;
+  let traversal = "bfs";
   let started = false;
   let finished = false;
   let running = false;
   let timer = null;
+  let modeChangeHandler = null;
+
+  /* The nodes waiting to be visited: the queue for BFS, the stack
+     for DFS. The stack is shown top first, so the node popped next
+     reads first. */
+  function waiting() {
+    return traversal === "dfs" ? stack : queue;
+  }
+
+  function waitingLabel() {
+    return traversal === "dfs" ? "Stack" : "Queue";
+  }
+
+  function traversalName() {
+    return traversal === "dfs" ? "DFS" : "BFS";
+  }
+
+  function orderPlaceholder() {
+    return traversal === "dfs" ? GRAPH_DFS_ORDER_PLACEHOLDER : GRAPH_ORDER_PLACEHOLDER;
+  }
+
+  function statusPlaceholder() {
+    return traversal === "dfs" ? GRAPH_DFS_STATUS_PLACEHOLDER : GRAPH_STATUS_PLACEHOLDER;
+  }
 
   function edgeKey(u, v) {
     return [u, v].sort().join("-");
@@ -3644,7 +3722,8 @@ function createGraphViz(els) {
       if (label === start) node.classList.add("start");
       if (label === current) node.classList.add("current");
       else if (visited.has(label)) node.classList.add("visited");
-      else if (queue.includes(label)) node.classList.add("queued");
+      else if (waiting().includes(label))
+        node.classList.add(traversal === "dfs" ? "stacked" : "queued");
       node.addEventListener("click", () => setStart(label));
       canvas.appendChild(node);
     });
@@ -3653,13 +3732,16 @@ function createGraphViz(els) {
     els.nodes.textContent = Object.keys(GRAPH_NODES).length;
     els.edges.textContent = GRAPH_EDGES.length;
     els.visited.textContent = order.length;
-    els.queueSize.textContent = queue.length;
+    els.waitingLabel.textContent = waitingLabel();
+    els.queueSize.textContent = waiting().length;
     els.steps.textContent = steps;
-    els.queueOutput.textContent = queue.length === 0
-      ? GRAPH_QUEUE_PLACEHOLDER
-      : "Queue (front → back): " + queue.join(" → ");
+    els.queueOutput.textContent = waiting().length === 0
+      ? (traversal === "dfs" ? GRAPH_STACK_PLACEHOLDER : GRAPH_QUEUE_PLACEHOLDER)
+      : (traversal === "dfs"
+        ? "Stack (top → bottom): " + waiting().slice().reverse().join(" → ")
+        : "Queue (front → back): " + waiting().join(" → "));
     els.orderOutput.textContent = order.length === 0
-      ? GRAPH_ORDER_PLACEHOLDER
+      ? orderPlaceholder()
       : "Visit order: " + order.join(" → ");
   }
 
@@ -3676,7 +3758,7 @@ function createGraphViz(els) {
   }
 
   function setButtonsDisabled(disabled) {
-    els.bfsBtn.disabled = disabled;
+    els.runBtn.disabled = disabled;
     els.stepBtn.disabled = disabled;
     els.demoBtn.disabled = disabled;
   }
@@ -3693,9 +3775,9 @@ function createGraphViz(els) {
     stopRun();
     current = null;
     render();
-    setStatus(`BFS complete — visited all ${order.length} nodes in ${steps} steps. `
+    setStatus(`${traversalName()} complete — visited all ${order.length} nodes in ${steps} steps. `
       + `Visit order: ${order.join(" → ")}.`);
-    logLine("BFS complete — every node reached.");
+    logLine(`${traversalName()} complete — every node reached.`);
   }
 
   /* One BFS step: enqueue the start on the first call, then dequeue
@@ -3742,14 +3824,64 @@ function createGraphViz(els) {
     return true;
   }
 
-  function runBfs() {
+  /* One DFS step: push the start on the first call, then pop the
+     top node, visit it, and push its unvisited neighbours in reverse
+     sorted order — so the smallest neighbour ends up on top and is
+     visited first. Returns false when the walk is finished. */
+  function stepDfs() {
+    if (finished) return false;
+    if (!started) {
+      started = true;
+      stack = [start];
+      visited = new Set([start]);
+      setStatus(`Start at ${start} — push ${start} onto the stack.`);
+      logLine(`Start at ${start} — push ${start} onto the stack.`);
+      render();
+      return true;
+    }
+    if (stack.length === 0) {
+      finish();
+      return false;
+    }
+    const node = stack.pop();
+    current = node;
+    order.push(node);
+    steps++;
+    const pushed = [];
+    [...adjacency[node]].reverse().forEach((next) => {
+      if (!visited.has(next)) {
+        visited.add(next);
+        stack.push(next);
+        treeEdges.add(edgeKey(node, next));
+        pushed.push(next);
+      }
+    });
+    setStatus(pushed.length > 0
+      ? `Visit ${node} — pop it, push ${pushed.join(", ")} (reversed, so ${pushed[pushed.length - 1]} is on top).`
+      : `Visit ${node} — pop it, no new neighbours.`);
+    logLine(`Visit ${node} — pop, ${stack.length} left on the stack.`);
+    pushed.forEach((next) => logLine(`Push ${next} (neighbour of ${node}).`));
+    render();
+    if (stack.length === 0) {
+      finish();
+      return false;
+    }
+    return true;
+  }
+
+  /* One step of whichever traversal is selected. */
+  function step() {
+    return traversal === "dfs" ? stepDfs() : stepBfs();
+  }
+
+  function run() {
     if (running) return;
     if (finished) reset();
     running = true;
     setButtonsDisabled(true);
     const tick = () => {
       if (!running) return;
-      if (stepBfs()) timer = setTimeout(tick, GRAPH_STEP_MS);
+      if (step()) timer = setTimeout(tick, GRAPH_STEP_MS);
     };
     tick();
   }
@@ -3759,7 +3891,7 @@ function createGraphViz(els) {
     els.startSelect.value = GRAPH_DEMO_START;
     start = GRAPH_DEMO_START;
     render();
-    runBfs();
+    run();
   }
 
   function setStart(label) {
@@ -3767,12 +3899,23 @@ function createGraphViz(els) {
     start = label;
     els.startSelect.value = label;
     reset();
-    setStatus(`Start node is ${label} — run BFS to walk from here.`);
+    setStatus(`Start node is ${label} — run ${traversalName()} to walk from here.`);
+  }
+
+  /* Switching traversal clears the walk and swaps the pseudocode and
+     case notes through the callback app.js registers. */
+  function setTraversal(mode) {
+    if (running || (mode !== "bfs" && mode !== "dfs")) return;
+    traversal = mode;
+    els.traversalSelect.value = mode;
+    reset();
+    if (modeChangeHandler) modeChangeHandler();
   }
 
   function reset() {
     stopRun();
     queue = [];
+    stack = [];
     visited = new Set();
     order = [];
     treeEdges = new Set();
@@ -3783,26 +3926,30 @@ function createGraphViz(els) {
     start = els.startSelect.value;
     render();
     els.log.innerHTML = "";
-    setStatus(GRAPH_STATUS_PLACEHOLDER);
+    setStatus(statusPlaceholder());
   }
 
-  els.bfsBtn.addEventListener("click", runBfs);
+  els.runBtn.addEventListener("click", run);
   els.stepBtn.addEventListener("click", () => {
     if (running) return;
     if (finished) reset();
-    stepBfs();
+    step();
   });
   els.demoBtn.addEventListener("click", demo);
   els.resetBtn.addEventListener("click", reset);
   els.startSelect.addEventListener("change", (e) => setStart(e.target.value));
+  els.traversalSelect.addEventListener("change", (e) => setTraversal(e.target.value));
 
   render();
-  setStatus(GRAPH_STATUS_PLACEHOLDER);
+  setStatus(statusPlaceholder());
   return {
-    bfs: runBfs, step: stepBfs, demo, reset, setStart, stopRun,
+    run, step, demo, reset, setStart, setTraversal, stopRun,
+    set onModeChange(fn) { modeChangeHandler = fn; },
+    get mode() { return traversal; },
+    get info() { return traversal === "dfs" ? GRAPH_DFS_INFO : GRAPH_INFO; },
     get order() { return order.slice(); },
     get visitedCount() { return order.length; },
-    get queueLength() { return queue.length; },
+    get queueLength() { return waiting().length; },
     get steps() { return steps; },
     get running() { return running; },
     get finished() { return finished; },
@@ -3816,13 +3963,15 @@ function initGraphViz() {
   return createGraphViz({
     stage: $("graphStage"),
     startSelect: $("graphStartSelect"),
-    bfsBtn: $("bfsBtn"),
+    traversalSelect: $("graphTraversalSelect"),
+    runBtn: $("graphRunBtn"),
     stepBtn: $("graphStepBtn"),
     demoBtn: $("demoGraphBtn"),
     resetBtn: $("resetGraphBtn"),
     nodes: $("graphNodes"),
     edges: $("graphEdges"),
     visited: $("graphVisited"),
+    waitingLabel: $("graphWaitingLabel"),
     queueSize: $("graphQueueSize"),
     steps: $("graphSteps"),
     status: $("graphStatus"),

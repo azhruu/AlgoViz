@@ -51,7 +51,7 @@
           <option value="avl">AVL Tree</option>
           <option value="hashtable">Hash Table</option>
           <option value="heapviz">Heap (Min / Max)</option>
-          <option value="graph">Graph — BFS</option>
+          <option value="graph">Graph — BFS / DFS</option>
         </optgroup>
       </select>
     </label>
@@ -303,7 +303,13 @@
           <option value="H">H</option>
         </select>
       </label>
-      <button id="bfsBtn" class="primary">▶ BFS</button>
+      <label>Traversal
+        <select id="graphTraversalSelect">
+          <option value="bfs" selected>BFS — level by level</option>
+          <option value="dfs">DFS — deep first</option>
+        </select>
+      </label>
+      <button id="graphRunBtn" class="primary">▶ Run</button>
       <button id="graphStepBtn">Step</button>
       <button id="demoGraphBtn">▶ Demo</button>
       <button id="resetGraphBtn">Reset</button>
@@ -311,7 +317,7 @@
     <div class="graph-area">
       <div id="graphStage" class="graph-stage"></div>
       <div class="graph-side">
-        <div class="graph-stats">Nodes <strong id="graphNodes">8</strong> · Edges <strong id="graphEdges">11</strong> · Visited <strong id="graphVisited">0</strong> · Queue <strong id="graphQueueSize">0</strong> · Steps <strong id="graphSteps">0</strong></div>
+        <div class="graph-stats">Nodes <strong id="graphNodes">8</strong> · Edges <strong id="graphEdges">11</strong> · Visited <strong id="graphVisited">0</strong> · <span id="graphWaitingLabel">Queue</span> <strong id="graphQueueSize">0</strong> · Steps <strong id="graphSteps">0</strong></div>
         <div id="graphStatus" class="graph-status">Pick a start node, then run BFS — or press Demo to watch it from A.</div>
         <div id="graphQueueOutput" class="graph-queue-output">Queue is empty.</div>
         <div id="graphOrderOutput" class="graph-order-output">No visit order yet — run BFS to walk the graph level by level.</div>
@@ -351,7 +357,7 @@
     <div class="card"><h3>Sorting</h3><p>Bubble, selection, insertion, merge, quick, heap and more — with bar animations and swap tracking.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Searching</h3><p>Linear and binary search live — watch the scan check each element, or the mid-pointer halve the search window until it finds the target.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Trees</h3><p>Binary search tree, AVL tree and heap are live — insert and search animated on a node canvas, one comparison at a time, with the AVL tree rebalancing itself through LL, RR, LR and RL rotations and the heap bubbling values up and down between a tree view and an array view.</p><span class="tag live">Live</span></div>
-    <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS is live — watch a queue walk an 8-node graph level by level, with the visit order and the queue shown live. DFS, Dijkstra and A* are next.</p><span class="tag live">Live</span></div>
+    <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS and DFS are live — watch a queue walk an 8-node graph level by level, or a stack dive deep down one branch, with the visit order and the queue / stack shown live. Dijkstra and A* are next.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures — a linked list with head, tail and NULL pointers, a doubly linked list you can walk forward from the head or backward from the tail, plus live stack and queue panels.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Hashing</h3><p>Hash functions, collisions and chaining — made visible: keys hash into 8 buckets with h(key) = key mod 8, and keys that collide chain up in the same bucket, with a running collision count and load factor.</p><span class="tag live">Live</span></div>
   </div>
