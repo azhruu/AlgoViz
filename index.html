@@ -291,7 +291,7 @@
 
   <div id="graphPanel" class="graph-panel" hidden>
     <div class="controls">
-      <label>Start node
+      <label id="graphStartLabel">Start node
         <select id="graphStartSelect">
           <option value="A" selected>A</option>
           <option value="B">B</option>
@@ -307,17 +307,19 @@
         <select id="graphTraversalSelect">
           <option value="bfs" selected>BFS — level by level</option>
           <option value="dfs">DFS — deep first</option>
+          <option value="dijkstra">Dijkstra — cheapest path on a weighted grid</option>
         </select>
       </label>
       <button id="graphRunBtn" class="primary">▶ Run</button>
       <button id="graphStepBtn">Step</button>
       <button id="demoGraphBtn">▶ Demo</button>
       <button id="resetGraphBtn">Reset</button>
+      <button id="newGridBtn" hidden>New grid</button>
     </div>
     <div class="graph-area">
       <div id="graphStage" class="graph-stage"></div>
       <div class="graph-side">
-        <div class="graph-stats">Nodes <strong id="graphNodes">8</strong> · Edges <strong id="graphEdges">11</strong> · Visited <strong id="graphVisited">0</strong> · <span id="graphWaitingLabel">Queue</span> <strong id="graphQueueSize">0</strong> · Steps <strong id="graphSteps">0</strong></div>
+        <div class="graph-stats"><span id="graphNodesLabel">Nodes</span> <strong id="graphNodes">8</strong> · <span id="graphEdgesLabel">Edges</span> <strong id="graphEdges">11</strong> · Visited <strong id="graphVisited">0</strong> · <span id="graphWaitingLabel">Queue</span> <strong id="graphQueueSize">0</strong> · Steps <strong id="graphSteps">0</strong></div>
         <div id="graphStatus" class="graph-status">Pick a start node, then run BFS — or press Demo to watch it from A.</div>
         <div id="graphQueueOutput" class="graph-queue-output">Queue is empty.</div>
         <div id="graphOrderOutput" class="graph-order-output">No visit order yet — run BFS to walk the graph level by level.</div>
@@ -357,7 +359,7 @@
     <div class="card"><h3>Sorting</h3><p>Bubble, selection, insertion, merge, quick, heap and more — with bar animations and swap tracking.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Searching</h3><p>Linear and binary search live — watch the scan check each element, or the mid-pointer halve the search window until it finds the target.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Trees</h3><p>Binary search tree, AVL tree and heap are live — insert and search animated on a node canvas, one comparison at a time, with the AVL tree rebalancing itself through LL, RR, LR and RL rotations and the heap bubbling values up and down between a tree view and an array view.</p><span class="tag live">Live</span></div>
-    <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS and DFS are live — watch a queue walk an 8-node graph level by level, or a stack dive deep down one branch, with the visit order and the queue / stack shown live. Dijkstra and A* are next.</p><span class="tag live">Live</span></div>
+    <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS and DFS are live — watch a queue walk an 8-node graph level by level, or a stack dive deep down one branch, with the visit order and the queue / stack shown live. Dijkstra is live too, on a 12×7 weighted grid: it settles the cheapest cell first and traces the lowest-cost route from S to T, with click-to-toggle walls and a fresh grid on demand. A* is next.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures — a linked list with head, tail and NULL pointers, a doubly linked list you can walk forward from the head or backward from the tail, plus live stack and queue panels.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Hashing</h3><p>Hash functions, collisions and chaining — made visible: keys hash into 8 buckets with h(key) = key mod 8, and keys that collide chain up in the same bucket, with a running collision count and load factor.</p><span class="tag live">Live</span></div>
   </div>
