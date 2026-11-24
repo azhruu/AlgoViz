@@ -9,7 +9,7 @@ const ALGO_NAMES = {
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
   avl: "AVL Tree", hashtable: "Hash Table", heapviz: "Heap",
-  graph: "Graph — BFS / DFS / Dijkstra",
+  graph: "Graph — BFS / DFS / Dijkstra / A*",
 };
 
 const player = new Player($("stage"), {

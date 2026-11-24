@@ -3671,6 +3671,32 @@ const DIJKSTRA_INFO = {
   follow prev[] back from target to trace the path`,
 };
 
+const ASTAR_INFO = {
+  complexity: "O(E) with a good heuristic · O(V²) here",
+  cases: {
+    best: "O(d) — the heuristic points straight at the target and the search barely strays from the optimal path",
+    average: "O(E) — the heuristic pulls the search towards the target, so it usually settles fewer cells than Dijkstra on the same grid",
+    worst: "O(V²) — a misleading grid (or a target cut off by walls) degrades to Dijkstra and settles every reachable cell",
+    note: "A* is Dijkstra with a sense of direction: each cell is ordered by f = g + h, where g is the cost so far and h is the Manhattan distance left to the target. The heuristic never overestimates — every step costs at least 1 — so the first time the target is settled its cost is still optimal, exactly as with Dijkstra, but the search is pulled towards the target and usually settles fewer cells. Drag across the grid to paint walls and watch the guided search route around them.",
+  },
+  pseudocode:
+`astar(start, target)     <- a priority queue, lowest f first
+  g[start] = 0, f[start] = h(start)   <- h = Manhattan distance
+  frontier = [(start, f = 0)]         <- lowest f first
+  while frontier is not empty:
+    cell = extract lowest f from frontier
+    if cell is target: stop    <- its cost is optimal
+    for each neighbour of cell (up / right / down / left):
+      if neighbour is a wall or already settled: skip
+      newG = g[cell] + weight(neighbour)
+      if newG < g[neighbour]:
+        g[neighbour] = newG
+        f[neighbour] = newG + h(neighbour)
+        prev[neighbour] = cell
+        frontier.add(neighbour, f[neighbour])
+  follow prev[] back from target to trace the path`,
+};
+
 const DIJKSTRA_ROWS = 7;
 const DIJKSTRA_COLS = 12;
 const DIJKSTRA_START = { r: 0, c: 0 };
@@ -3682,9 +3708,13 @@ const DIJKSTRA_DEFAULT_WALLS = [
   [2, 8], [3, 8], [4, 8], [5, 8],
 ];
 const DIJKSTRA_STATUS_PLACEHOLDER =
-  "Click a cell to toggle a wall, then run Dijkstra — or press Demo to watch it find the cheapest route from S to T.";
+  "Drag across cells to paint walls (drag over a wall to erase it), then run Dijkstra — or press Demo to watch it find the cheapest route from S to T.";
 const DIJKSTRA_ORDER_PLACEHOLDER =
   "No path yet — run Dijkstra to find the cheapest route from S to T.";
+const ASTAR_STATUS_PLACEHOLDER =
+  "Drag across cells to paint walls (drag over a wall to erase it), then run A* — or press Demo to watch the guided search find the cheapest route from S to T.";
+const ASTAR_ORDER_PLACEHOLDER =
+  "No path yet — run A* to find the cheapest route from S to T.";
 const DIJKSTRA_FRONTIER_PLACEHOLDER = "Frontier is empty.";
 
 function dijkstraCellKey(r, c) { return r + "," + c; }
@@ -3696,7 +3726,7 @@ function dijkstraParseKey(key) {
 
 /* The default grid: weights 1-5 from a fixed pattern, so the demo is
    the same every load and the node test can pin the exact cost. */
-function dijkstraDefaultGrid() {
+function defaultGrid() {
   const weights = [];
   for (let r = 0; r < DIJKSTRA_ROWS; r++) {
     const row = [];
@@ -3712,7 +3742,7 @@ function dijkstraDefaultGrid() {
 /* A fresh random grid: weights 1-5, about one cell in ten a wall,
    never on the start or the target. Retries until the target is
    reachable, so "New grid" never deals an impossible board. */
-function dijkstraRandomGrid() {
+function randomGrid() {
   for (let attempt = 0; attempt < 50; attempt++) {
     const grid = { rows: DIJKSTRA_ROWS, cols: DIJKSTRA_COLS, weights: [], walls: new Set() };
     for (let r = 0; r < DIJKSTRA_ROWS; r++) {
@@ -3727,7 +3757,7 @@ function dijkstraRandomGrid() {
     }
     if (dijkstraGridFrames(grid, DIJKSTRA_START, DIJKSTRA_TARGET).reachable) return grid;
   }
-  return dijkstraDefaultGrid();
+  return defaultGrid();
 }
 
 const DIJKSTRA_DIRECTIONS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
@@ -3754,7 +3784,10 @@ function dijkstraGridFrames(grid, start, target) {
   const snapshot = (current, finished, path, totalCost) => ({
     current,
     settled: settledOrder.slice(),
-    frontier: frontier.slice().sort((a, b) => a.dist - b.dist),
+    /* Copy each frontier entry: later relaxations mutate entries in
+       place, and a frame must keep the values it was recorded with. */
+    frontier: frontier.map((e) => ({ key: e.key, dist: e.dist }))
+      .sort((a, b) => a.dist - b.dist),
     dist: Object.assign({}, dist),
     prev: Object.assign({}, prev),
     path: path ? path.slice() : null,
@@ -3808,6 +3841,108 @@ function dijkstraGridFrames(grid, start, target) {
   return { frames, path, totalCost, reachable };
 }
 
+/* The Manhattan distance from a cell to the target: the fewest steps
+   left, ignoring walls and weights. Every step costs at least 1, so
+   this never overestimates the true remaining cost — the heuristic
+   is admissible, which is what keeps A* optimal. */
+function manhattanDistance(r, c, target) {
+  return Math.abs(r - target.r) + Math.abs(c - target.c);
+}
+
+/* Pure A* on a weighted grid: the same shape as dijkstraGridFrames,
+   but the frontier is ordered by f = g + h instead of by g alone, so
+   the search is pulled towards the target. A frame is
+   { current, settled, frontier, dist, prev, path, finished,
+     totalCost }: `dist` holds g (the cost so far), each frontier
+   entry carries { key, dist (g), h, f }, and the first frame is the
+   state before anything is settled. The last frame is finished, with
+   `path` (start -> target) or null when the target cannot be reached.
+   Entering a cell costs that cell's weight. */
+function astarGridFrames(grid, start, target) {
+  const startKey = dijkstraCellKey(start.r, start.c);
+  const targetKey = dijkstraCellKey(target.r, target.c);
+  const inBounds = (r, c) => r >= 0 && r < grid.rows && c >= 0 && c < grid.cols;
+  const passable = (r, c) => inBounds(r, c) && !grid.walls.has(dijkstraCellKey(r, c));
+  const dist = { [startKey]: 0 };
+  const prev = { [startKey]: null };
+  const settled = new Set();
+  const settledOrder = [];
+  let frontier = [{
+    key: startKey, dist: 0,
+    h: manhattanDistance(start.r, start.c, target),
+    f: manhattanDistance(start.r, start.c, target),
+  }];
+  const frames = [];
+  const snapshot = (current, finished, path, totalCost) => ({
+    current,
+    settled: settledOrder.slice(),
+    /* Copy each frontier entry: later relaxations mutate entries in
+       place, and a frame must keep the values it was recorded with. */
+    frontier: frontier.map((e) => ({ key: e.key, dist: e.dist, h: e.h, f: e.f }))
+      .sort((a, b) => (a.f - b.f) || (a.h - b.h)),
+    dist: Object.assign({}, dist),
+    prev: Object.assign({}, prev),
+    path: path ? path.slice() : null,
+    finished,
+    totalCost,
+  });
+  frames.push(snapshot(null, false, null, null));
+  let path = null;
+  let totalCost = null;
+  let reachable = false;
+  while (frontier.length > 0) {
+    // Lowest f first; ties prefer the smaller h (closer to the
+    // target), then keep insertion order (the earliest queued wins).
+    let cheapest = 0;
+    for (let i = 1; i < frontier.length; i++) {
+      if (frontier[i].f < frontier[cheapest].f
+        || (frontier[i].f === frontier[cheapest].f && frontier[i].h < frontier[cheapest].h)) {
+        cheapest = i;
+      }
+    }
+    const current = frontier.splice(cheapest, 1)[0].key;
+    if (settled.has(current)) continue;
+    settled.add(current);
+    settledOrder.push(current);
+    if (current === targetKey) {
+      reachable = true;
+      totalCost = dist[current];
+      path = [];
+      let node = current;
+      while (node !== null) {
+        path.unshift(node);
+        node = prev[node];
+      }
+      frames.push(snapshot(current, true, path, totalCost));
+      break;
+    }
+    const { r, c } = dijkstraParseKey(current);
+    DIJKSTRA_DIRECTIONS.forEach(([dr, dc]) => {
+      const nr = r + dr, nc = c + dc;
+      if (!passable(nr, nc)) return;
+      const nextKey = dijkstraCellKey(nr, nc);
+      if (settled.has(nextKey)) return;
+      const via = dist[current] + grid.weights[nr][nc];
+      if (dist[nextKey] === undefined || via < dist[nextKey]) {
+        dist[nextKey] = via;
+        prev[nextKey] = current;
+        const h = manhattanDistance(nr, nc, target);
+        const existing = frontier.find((e) => e.key === nextKey);
+        if (existing) {
+          existing.dist = via;
+          existing.h = h;
+          existing.f = via + h;
+        } else {
+          frontier.push({ key: nextKey, dist: via, h, f: via + h });
+        }
+      }
+    });
+    frames.push(snapshot(current, false, null, null));
+  }
+  if (!reachable) frames.push(snapshot(null, true, null, null));
+  return { frames, path, totalCost, reachable };
+}
+
 /* els: { stage, startLabel, startSelect, traversalSelect, runBtn, stepBtn, demoBtn,
           resetBtn, newGridBtn, nodesLabel, edgesLabel, nodes, edges, visited,
           waitingLabel, queueSize, steps, status, queueOutput, orderOutput, log }
@@ -3830,17 +3965,31 @@ function createGraphViz(els) {
   let timer = null;
   let modeChangeHandler = null;
 
-  /* Dijkstra state: the grid, the precomputed frames, and the index
-     of the frame currently on screen (-1 until the walk starts). */
-  let dijkstraGrid = dijkstraDefaultGrid();
-  let dijkstraFrames = [];
-  let dijkstraPos = -1;
+  /* Grid-search state (shared by Dijkstra and A*): the grid, the
+     precomputed frames, and the index of the frame currently on
+     screen (-1 until the walk starts). */
+  let searchGrid = defaultGrid();
+  let gridFrames = [];
+  let gridPos = -1;
+  /* While a wall-painting drag is in progress: "paint" adds walls,
+     "erase" removes them. Null when no drag is happening. */
+  let paintMode = null;
 
   function isDijkstra() { return traversal === "dijkstra"; }
+  function isAstar() { return traversal === "astar"; }
+  function isGridSearch() { return isDijkstra() || isAstar(); }
 
-  function dijkstraFrame() {
-    return dijkstraPos >= 0 && dijkstraPos < dijkstraFrames.length
-      ? dijkstraFrames[dijkstraPos] : null;
+  function gridFrame() {
+    return gridPos >= 0 && gridPos < gridFrames.length
+      ? gridFrames[gridPos] : null;
+  }
+
+  /* The grid search for the selected mode: Dijkstra settles the
+     cheapest cell first, A* the lowest f = g + h. */
+  function computeGridFrames() {
+    return isAstar()
+      ? astarGridFrames(searchGrid, DIJKSTRA_START, DIJKSTRA_TARGET)
+      : dijkstraGridFrames(searchGrid, DIJKSTRA_START, DIJKSTRA_TARGET);
   }
 
   /* The nodes waiting to be visited: the queue for BFS, the stack
@@ -3859,11 +4008,15 @@ function createGraphViz(els) {
   }
 
   function orderPlaceholder() {
-    return traversal === "dfs" ? GRAPH_DFS_ORDER_PLACEHOLDER : GRAPH_ORDER_PLACEHOLDER;
+    return traversal === "dfs" ? GRAPH_DFS_ORDER_PLACEHOLDER
+      : traversal === "astar" ? ASTAR_ORDER_PLACEHOLDER
+      : traversal === "dijkstra" ? DIJKSTRA_ORDER_PLACEHOLDER
+      : GRAPH_ORDER_PLACEHOLDER;
   }
 
   function statusPlaceholder() {
     return traversal === "dfs" ? GRAPH_DFS_STATUS_PLACEHOLDER
+      : traversal === "astar" ? ASTAR_STATUS_PLACEHOLDER
       : traversal === "dijkstra" ? DIJKSTRA_STATUS_PLACEHOLDER
       : GRAPH_STATUS_PLACEHOLDER;
   }
@@ -3878,7 +4031,7 @@ function createGraphViz(els) {
   }
 
   function render() {
-    if (isDijkstra()) { renderDijkstra(); return; }
+    if (isGridSearch()) { renderGridSearch(); return; }
     els.stage.innerHTML = "";
     const canvas = document.createElement("div");
     canvas.className = "graph-canvas";
@@ -3937,25 +4090,27 @@ function createGraphViz(els) {
       : "Visit order: " + order.join(" → ");
   }
 
-  /* Dijkstra mode: a weighted grid instead of the node canvas. Each
-     cell shows the cost of stepping onto it; settled cells show their
-     final distance in the corner, frontier cells are outlined purple,
-     the cell being settled glows gold, and the finished path lights
-     up teal. Clicking a cell toggles it as a wall. */
-  function renderDijkstra() {
+  /* Grid-search mode (Dijkstra or A*): a weighted grid instead of
+     the node canvas. Each cell shows the cost of stepping onto it;
+     settled cells show their final distance in the corner, frontier
+     cells are outlined purple, the cell being settled glows gold,
+     and the finished path lights up teal. Dragging across cells
+     paints walls (dragging over a wall erases it) — a click paints
+     or erases just the one cell. */
+  function renderGridSearch() {
     els.stage.innerHTML = "";
-    const frame = dijkstraFrame();
+    const frame = gridFrame();
     const settledSet = new Set(frame ? frame.settled : []);
     const frontierSet = new Set(frame ? frame.frontier.map((e) => e.key) : []);
     const pathSet = new Set(frame && frame.path ? frame.path : []);
     const gridEl = document.createElement("div");
     gridEl.className = "dijkstra-grid";
-    for (let r = 0; r < dijkstraGrid.rows; r++) {
-      for (let c = 0; c < dijkstraGrid.cols; c++) {
+    for (let r = 0; r < searchGrid.rows; r++) {
+      for (let c = 0; c < searchGrid.cols; c++) {
         const key = dijkstraCellKey(r, c);
         const isStart = r === DIJKSTRA_START.r && c === DIJKSTRA_START.c;
         const isTarget = r === DIJKSTRA_TARGET.r && c === DIJKSTRA_TARGET.c;
-        const isWall = dijkstraGrid.walls.has(key);
+        const isWall = searchGrid.walls.has(key);
         const cell = document.createElement("div");
         cell.className = "grid-cell";
         if (isStart) cell.classList.add("start");
@@ -3972,7 +4127,7 @@ function createGraphViz(els) {
         else if (!isWall) {
           const weight = document.createElement("span");
           weight.className = "cell-weight";
-          weight.textContent = dijkstraGrid.weights[r][c];
+          weight.textContent = searchGrid.weights[r][c];
           cell.appendChild(weight);
           if (frame && frame.dist[key] !== undefined) {
             const d = document.createElement("span");
@@ -3981,7 +4136,11 @@ function createGraphViz(els) {
             cell.appendChild(d);
           }
         }
-        cell.addEventListener("click", () => toggleWall(r, c));
+        cell.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          startPaint(r, c);
+        });
+        cell.addEventListener("mouseover", () => applyPaint(r, c));
         gridEl.appendChild(cell);
       }
     }
@@ -3991,25 +4150,33 @@ function createGraphViz(els) {
     els.edgesLabel.textContent = "Walls";
     els.newGridBtn.hidden = false;
     els.startLabel.hidden = true;
-    els.nodes.textContent = dijkstraGrid.rows * dijkstraGrid.cols;
-    els.edges.textContent = dijkstraGrid.walls.size;
+    els.nodes.textContent = searchGrid.rows * searchGrid.cols;
+    els.edges.textContent = searchGrid.walls.size;
     els.visited.textContent = frame ? frame.settled.length : 0;
     els.waitingLabel.textContent = "Frontier";
     els.queueSize.textContent = frame ? frame.frontier.length : 0;
     els.steps.textContent = frame ? frame.settled.length : 0;
     els.queueOutput.textContent = !frame || frame.frontier.length === 0
       ? DIJKSTRA_FRONTIER_PLACEHOLDER
-      : "Frontier (cheapest first): " + frame.frontier
-        .map((e) => "(" + e.key.replace(",", ", ") + ") = " + e.dist).join(" → ");
+      : isAstar()
+        ? "Frontier (lowest f first): " + frame.frontier
+          .map((e) => "(" + e.key.replace(",", ", ") + ") f=" + e.f
+            + " (g=" + e.dist + " + h=" + e.h + ")").join(" → ")
+        : "Frontier (cheapest first): " + frame.frontier
+          .map((e) => "(" + e.key.replace(",", ", ") + ") = " + e.dist).join(" → ");
     if (!frame) {
-      els.orderOutput.textContent = DIJKSTRA_ORDER_PLACEHOLDER;
+      els.orderOutput.textContent = orderPlaceholder();
     } else if (frame.finished && frame.path) {
-      els.orderOutput.textContent = "Shortest path (cost " + frame.totalCost + "): "
-        + frame.path.map((k) => "(" + k.replace(",", ", ") + ")").join(" → ");
+      els.orderOutput.textContent = isAstar()
+        ? "Shortest path (cost " + frame.totalCost + ", " + frame.path.length
+          + " cells, " + frame.settled.length + " settled): "
+          + frame.path.map((k) => "(" + k.replace(",", ", ") + ")").join(" → ")
+        : "Shortest path (cost " + frame.totalCost + "): "
+          + frame.path.map((k) => "(" + k.replace(",", ", ") + ")").join(" → ");
     } else if (frame.finished) {
       els.orderOutput.textContent = "No path — the target is cut off by walls.";
     } else if (frame.settled.length === 0) {
-      els.orderOutput.textContent = DIJKSTRA_ORDER_PLACEHOLDER;
+      els.orderOutput.textContent = orderPlaceholder();
     } else {
       const latest = frame.settled.slice(-8);
       els.orderOutput.textContent = "Settled " + frame.settled.length + " cell(s) so far — latest: "
@@ -4142,47 +4309,62 @@ function createGraphViz(els) {
     return true;
   }
 
-  /* One Dijkstra step: show the starting frame on the first call,
+  /* One grid-search step: show the starting frame on the first call,
      then settle one cell per step — the cheapest cell in the
-     frontier — until the target is settled or the frontier runs
-     dry. Returns false when the walk is finished. */
-  function stepDijkstra() {
+     frontier for Dijkstra, the lowest f = g + h for A* — until the
+     target is settled or the frontier runs dry. Returns false when
+     the walk is finished. */
+  function stepGridSearch() {
     if (finished) return false;
     if (!started) {
       started = true;
-      dijkstraFrames = dijkstraGridFrames(dijkstraGrid, DIJKSTRA_START, DIJKSTRA_TARGET).frames;
-      dijkstraPos = 0;
+      gridFrames = computeGridFrames().frames;
+      gridPos = 0;
       steps = 0;
       render();
-      setStatus("Start at S (0, 0) — distance 0. The frontier holds the cheapest unvisited cell.");
-      logLine("Start at S — distance 0, frontier: (0, 0) = 0.");
+      setStatus(isAstar()
+        ? "Start at S (0, 0) — g = 0, f = h = 17 (Manhattan distance to T). The frontier holds the lowest f."
+        : "Start at S (0, 0) — distance 0. The frontier holds the cheapest unvisited cell.");
+      logLine(isAstar()
+        ? "Start at S — g = 0, f = 17, frontier: (0, 0) f=17."
+        : "Start at S — distance 0, frontier: (0, 0) = 0.");
       return true;
     }
-    dijkstraPos++;
-    const frame = dijkstraFrames[dijkstraPos];
+    gridPos++;
+    const frame = gridFrames[gridPos];
     steps = frame.settled.length;
     render();
     if (frame.finished) {
-      finishDijkstra(frame);
+      finishGridSearch(frame);
       return false;
     }
     const cell = dijkstraParseKey(frame.current);
-    logLine(`Settle (${cell.r}, ${cell.c}) — cheapest in the frontier at ${frame.dist[frame.current]}.`);
-    setStatus(`Settle (${cell.r}, ${cell.c}) at distance ${frame.dist[frame.current]} — `
-      + `${frame.frontier.length} cell(s) waiting in the frontier.`);
+    if (isAstar()) {
+      logLine(`Settle (${cell.r}, ${cell.c}) — lowest f in the frontier at g = ${frame.dist[frame.current]}.`);
+      setStatus(`Settle (${cell.r}, ${cell.c}) at g = ${frame.dist[frame.current]} — `
+        + `${frame.frontier.length} cell(s) waiting in the frontier.`);
+    } else {
+      logLine(`Settle (${cell.r}, ${cell.c}) — cheapest in the frontier at ${frame.dist[frame.current]}.`);
+      setStatus(`Settle (${cell.r}, ${cell.c}) at distance ${frame.dist[frame.current]} — `
+        + `${frame.frontier.length} cell(s) waiting in the frontier.`);
+    }
     return true;
   }
 
-  function finishDijkstra(frame) {
+  function finishGridSearch(frame) {
     finished = true;
     stopRun();
     render();
+    const name = isAstar() ? "A*" : "Dijkstra";
     if (frame.path) {
-      setStatus(`Dijkstra complete — cheapest route from S to T costs ${frame.totalCost} `
-        + `(${frame.path.length} cells), settled ${frame.settled.length} cells to prove it.`);
+      setStatus(isAstar()
+        ? `A* complete — cheapest route from S to T costs ${frame.totalCost} `
+          + `(${frame.path.length} cells), settled ${frame.settled.length} cells to find it.`
+        : `Dijkstra complete — cheapest route from S to T costs ${frame.totalCost} `
+          + `(${frame.path.length} cells), settled ${frame.settled.length} cells to prove it.`);
       logLine(`Shortest path found — cost ${frame.totalCost}.`);
     } else {
-      setStatus("Dijkstra complete — no path: the target is cut off by walls. "
+      setStatus(`${name} complete — no path: the target is cut off by walls. `
         + "Remove a wall or generate a new grid and try again.");
       logLine("No path — the target is unreachable.");
     }
@@ -4191,7 +4373,7 @@ function createGraphViz(els) {
   /* One step of whichever traversal is selected. */
   function step() {
     return traversal === "dfs" ? stepDfs()
-      : traversal === "dijkstra" ? stepDijkstra() : stepBfs();
+      : isGridSearch() ? stepGridSearch() : stepBfs();
   }
 
   function run() {
@@ -4215,7 +4397,7 @@ function createGraphViz(els) {
   }
 
   function setStart(label) {
-    if (isDijkstra()) return; // a grid has no named start node
+    if (isGridSearch()) return; // a grid has no named start node
     if (running || !Object.prototype.hasOwnProperty.call(GRAPH_NODES, label)) return;
     start = label;
     els.startSelect.value = label;
@@ -4226,7 +4408,7 @@ function createGraphViz(els) {
   /* Switching traversal clears the walk and swaps the pseudocode and
      case notes through the callback app.js registers. */
   function setTraversal(mode) {
-    if (running || (mode !== "bfs" && mode !== "dfs" && mode !== "dijkstra")) return;
+    if (running || (mode !== "bfs" && mode !== "dfs" && mode !== "dijkstra" && mode !== "astar")) return;
     traversal = mode;
     els.traversalSelect.value = mode;
     reset();
@@ -4235,8 +4417,8 @@ function createGraphViz(els) {
 
   /* A fresh random grid (always reachable), with the walk cleared. */
   function newGrid() {
-    if (running || !isDijkstra()) return;
-    dijkstraGrid = dijkstraRandomGrid();
+    if (running || !isGridSearch()) return;
+    searchGrid = randomGrid();
     reset();
     logLine("New grid — fresh weights and walls. Run Dijkstra to find the cheapest route.");
   }
@@ -4244,16 +4426,50 @@ function createGraphViz(els) {
   /* Clicking a grid cell toggles it as a wall (never the start or the
      target) and clears the walk, so the next run uses the new board. */
   function toggleWall(r, c) {
-    if (running || !isDijkstra()) return;
+    if (running || !isGridSearch()) return;
     const isEndpoint = (r === DIJKSTRA_START.r && c === DIJKSTRA_START.c)
       || (r === DIJKSTRA_TARGET.r && c === DIJKSTRA_TARGET.c);
     if (isEndpoint) return;
     const key = dijkstraCellKey(r, c);
-    if (dijkstraGrid.walls.has(key)) dijkstraGrid.walls.delete(key);
-    else dijkstraGrid.walls.add(key);
+    if (searchGrid.walls.has(key)) searchGrid.walls.delete(key);
+    else searchGrid.walls.add(key);
     reset();
-    setStatus((dijkstraGrid.walls.has(key) ? `Wall added at (${r}, ${c})` : `Wall removed at (${r}, ${c})`)
-      + " — run Dijkstra to find the new cheapest route.");
+    setStatus((searchGrid.walls.has(key) ? `Wall added at (${r}, ${c})` : `Wall removed at (${r}, ${c})`)
+      + ` — run ${isAstar() ? "A*" : "Dijkstra"} to find the new cheapest route.`);
+  }
+
+  /* Wall painting: pressing on a cell starts a stroke — painting
+     walls when the cell is open, erasing when it already is one —
+     and dragging across cells extends the stroke. The walk is
+     cleared on the first cell, so the next run uses the new board. */
+  function startPaint(r, c) {
+    if (running || !isGridSearch()) return;
+    const isEndpoint = (r === DIJKSTRA_START.r && c === DIJKSTRA_START.c)
+      || (r === DIJKSTRA_TARGET.r && c === DIJKSTRA_TARGET.c);
+    if (isEndpoint) return;
+    paintMode = searchGrid.walls.has(dijkstraCellKey(r, c)) ? "erase" : "paint";
+    reset();
+    applyPaint(r, c);
+  }
+
+  function applyPaint(r, c) {
+    if (!paintMode) return;
+    const isEndpoint = (r === DIJKSTRA_START.r && c === DIJKSTRA_START.c)
+      || (r === DIJKSTRA_TARGET.r && c === DIJKSTRA_TARGET.c);
+    if (isEndpoint) return;
+    const key = dijkstraCellKey(r, c);
+    if (paintMode === "paint") searchGrid.walls.add(key);
+    else searchGrid.walls.delete(key);
+    render();
+  }
+
+  /* Releasing the mouse anywhere ends the stroke and reports it. */
+  function finishPaint() {
+    if (!paintMode) return;
+    paintMode = null;
+    const name = isAstar() ? "A*" : "Dijkstra";
+    setStatus(`Walls updated (${searchGrid.walls.size} on the grid) — run ${name} to find the new cheapest route.`);
+    logLine("Walls updated — run " + name + " to find the new cheapest route.");
   }
 
   function reset() {
@@ -4267,8 +4483,9 @@ function createGraphViz(els) {
     steps = 0;
     started = false;
     finished = false;
-    dijkstraFrames = [];
-    dijkstraPos = -1;
+    gridFrames = [];
+    gridPos = -1;
+    paintMode = null;
     start = els.startSelect.value;
     render();
     els.log.innerHTML = "";
@@ -4286,6 +4503,9 @@ function createGraphViz(els) {
   els.newGridBtn.addEventListener("click", newGrid);
   els.startSelect.addEventListener("change", (e) => setStart(e.target.value));
   els.traversalSelect.addEventListener("change", (e) => setTraversal(e.target.value));
+  /* A paint stroke can end outside the grid, so the release is
+     watched on the whole document. */
+  document.addEventListener("mouseup", finishPaint);
 
   render();
   setStatus(statusPlaceholder());
@@ -4295,6 +4515,7 @@ function createGraphViz(els) {
     get mode() { return traversal; },
     get info() {
       return traversal === "dfs" ? GRAPH_DFS_INFO
+        : traversal === "astar" ? ASTAR_INFO
         : traversal === "dijkstra" ? DIJKSTRA_INFO : GRAPH_INFO;
     },
     get order() { return order.slice(); },
@@ -4305,11 +4526,19 @@ function createGraphViz(els) {
     get finished() { return finished; },
     get start() { return start; },
     get dijkstraPath() {
-      const frame = dijkstraFrame();
+      const frame = gridFrame();
       return frame && frame.path ? frame.path.slice() : null;
     },
     get dijkstraCost() {
-      const frame = dijkstraFrame();
+      const frame = gridFrame();
+      return frame ? frame.totalCost : null;
+    },
+    get astarPath() {
+      const frame = gridFrame();
+      return frame && frame.path ? frame.path.slice() : null;
+    },
+    get astarCost() {
+      const frame = gridFrame();
       return frame ? frame.totalCost : null;
     },
   };
