@@ -9,7 +9,7 @@ const ALGO_NAMES = {
   stack: "Stack", queue: "Queue", linkedlist: "Linked List",
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
   avl: "AVL Tree", hashtable: "Hash Table", heapviz: "Heap",
-  graph: "Graph — BFS / DFS / Dijkstra / A*",
+  graph: "Graph — BFS / DFS / Dijkstra / A*", hanoi: "Tower of Hanoi",
 };
 
 const player = new Player($("stage"), {
@@ -38,6 +38,7 @@ const avlViz = initAvlViz();
 const hashViz = initHashViz();
 const heapViz = initHeapViz();
 const graphViz = initGraphViz();
+const hanoiViz = initHanoiViz();
 /* Switching BFS / DFS swaps the pseudocode and case notes to match
    the selected traversal — but only while the graph panel is showing. */
 graphViz.onModeChange = () => {
@@ -184,7 +185,8 @@ function build() {
   const isHash = algo === "hashtable";
   const isHeap = algo === "heapviz";
   const isGraph = algo === "graph";
-  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap || isGraph;
+  const isHanoi = algo === "hanoi";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap || isGraph || isHanoi;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -201,6 +203,7 @@ function build() {
   $("hashPanel").hidden = !isHash;
   $("heapPanel").hidden = !isHeap;
   $("graphPanel").hidden = !isGraph;
+  $("hanoiPanel").hidden = !isHanoi;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -336,6 +339,21 @@ function build() {
     player.stop();
     playerB.stop();
     graphViz.reset();
+    return;
+  }
+
+  if (isHanoi) {
+    pseudoLines = HANOI_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = HANOI_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), HANOI_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    hanoiViz.reset();
     return;
   }
 

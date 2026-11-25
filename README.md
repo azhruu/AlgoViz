@@ -33,6 +33,7 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 - 🕸️ **Graph DFS visualizer** — the same 8-node graph with a traversal switch: DFS dives deep down one branch on a stack instead of walking level by level, neighbours pushed in reverse order so the smallest is visited first, with the stack (top first) and visit order shown live in the side panel; run it animated, step by step, or with a scripted demo from A (visit order A → B → D → H → F → G → E → C)
 - 🗺️ **Dijkstra shortest-path visualizer** — a 12×7 weighted grid where every cell shows the cost of stepping onto it (1–5) and two wall blocks force a detour; Dijkstra settles the cheapest cell in the frontier first, with settled cells showing their final distance, the frontier (cheapest first) and settle order shown live in the side panel, and the cheapest route from S to T traced in teal — on the default grid the cheapest route costs 48 over 18 cells, settling 76 cells to prove it; drag across cells to paint walls (drag over a wall to erase it), or generate a fresh random grid (always reachable), and run it animated, step by step, or with a scripted demo
 - 🧭 **A\* pathfinding visualizer** — the same 12×7 weighted grid, searched with a sense of direction: A\* orders the frontier by f = g + h, where g is the cost so far and h is the Manhattan distance left to the target, so the frontier line shows each cell's f = g + h live; the heuristic never overestimates (every step costs at least 1), so it finds the same cheapest route as Dijkstra — cost 48 over 18 cells on the default grid — after settling 75 cells instead of 76, and usually fewer on a fresh random grid; drag across cells to paint walls and watch the guided search route around them, and run it animated, step by step, or with a scripted demo
+- 🗼 **Tower of Hanoi visualizer** — three pegs and 3–6 discs, solved by the recursion itself: the optimal 2ⁿ − 1-move solution plays animated, one move at a time on Step, or as a 3-disc demo, with the disc that just moved glowing gold, a running move count against the optimal total, and the move sequence building live in the side panel
 - 🌑 **Clean dark UI** — zero dependencies, zero build step; just open it in a browser
 
 ## Live now
@@ -43,10 +44,11 @@ Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus
 | Searching | Linear · Binary |
 | Data structures | Stack (push / pop / peek) · Queue (enqueue / dequeue / peek) · Linked List (insert head / tail / index, delete, search, reverse) · Doubly Linked List (traverse forward / backward, insert head / tail / index, delete, search, reverse) · Binary Search Tree (insert / search on a node canvas, inorder / preorder / postorder traversals) · AVL Tree (self-balancing insert, balance-factor badges, LL / RR / LR / RL rotation animations) · Hash Table (insert / search / delete, h(key) = key mod 8, chaining collisions, load factor + collision count) · Heap (min/max insert & extract, tree + array views, mode switch re-heapifies) |
 | Graphs | BFS (level-by-level walk on an 8-node graph, live queue + visit order, any start node) · DFS (deep-first walk on the same graph, live stack + visit order, any start node) · Dijkstra (cheapest path on a 12×7 weighted grid, live frontier + settle order, drag-to-paint walls, new-grid button) · A* (guided search on the same grid, frontier ordered by f = g + h, drag-to-paint walls, new-grid button) |
+| Recursion | Tower of Hanoi (optimal 2ⁿ − 1-move solution, animated Solve, single-step, or 3-disc demo, 3–6 discs, live move count vs optimal) |
 
 ## Roadmap
 
-Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing ✓ → Heap ✓ → BFS ✓ → DFS ✓ → Dijkstra ✓ → A* ✓ → Tower of Hanoi. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
+Stack ✓ → Queue ✓ → Linked List ✓ → Doubly Linked List ✓ → BST ✓ → AVL ✓ → Hashing ✓ → Heap ✓ → BFS ✓ → DFS ✓ → Dijkstra ✓ → A* ✓ → Tower of Hanoi ✓ → Fibonacci recursion tree. Full day-by-day plan: [ROADMAP.md](ROADMAP.md).
 
 ## Run it
 
@@ -67,7 +69,7 @@ AlgoViz/
 │       ├── visualizer.js # playback engine (frames, play/pause/step)
 │       ├── sorting.js    # sorting algorithm frame-generators
 │       ├── searching.js  # searching algorithm frame-generators
-│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST, AVL, hash table, heap, graph BFS / DFS / Dijkstra / A*)
+│       ├── structures.js # interactive structures (stack, queue, linked list, doubly linked list, BST, AVL, hash table, heap, graph BFS / DFS / Dijkstra / A*, Tower of Hanoi)
 │       └── app.js        # UI wiring
 ├── ROADMAP.md            # day-by-day build plan
 └── LICENSE               # MIT

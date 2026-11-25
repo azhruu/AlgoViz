@@ -237,6 +237,27 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .graph-order-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--accent2);border-radius:10px;font-size:14px;line-height:1.5}
 .graph-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .graph-log li::before{content:"▸ ";color:var(--accent2)}
+
+/* Tower of Hanoi — three pegs in a row, discs stacked largest at the
+   bottom of each peg. The pole reads through the discs; the disc that
+   just moved glows gold until the next move. */
+.hanoi-panel{margin-top:20px}
+.hanoi-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.hanoi-stage{display:flex;gap:16px;min-height:320px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px}
+.hanoi-peg{flex:1;display:flex;flex-direction:column;min-width:0}
+.hanoi-discs{position:relative;flex:1;display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-start;gap:4px}
+.hanoi-discs::before{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:6px;height:100%;background:#26336b;border-radius:3px}
+.hanoi-disc{position:relative;z-index:1;background:var(--bar);border-radius:6px;padding:7px 0;text-align:center;font-weight:700;font-size:15px}
+.hanoi-disc.moving{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#06121a;box-shadow:0 0 0 2px var(--compare),0 0 16px rgba(255,209,102,.8)}
+.hanoi-base{height:8px;background:#26336b;border-radius:4px;margin-top:4px}
+.hanoi-peg-label{text-align:center;color:var(--muted);font-size:13px;font-weight:700;margin-top:8px}
+.hanoi-side{padding-top:4px}
+.hanoi-stats{color:var(--muted);font-size:14px}
+.hanoi-stats strong{color:var(--text);margin-left:6px}
+.hanoi-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.hanoi-moves-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--accent2);border-radius:10px;font-size:14px;line-height:1.5}
+.hanoi-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.hanoi-log li::before{content:"▸ ";color:var(--accent2)}
 .dijkstra-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;max-width:660px;margin:0 auto}
 .grid-cell{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bar);border-radius:6px;font-weight:700;font-size:15px;cursor:pointer;min-width:0;user-select:none;-webkit-user-select:none}
 .grid-cell .cell-weight{font-size:15px}

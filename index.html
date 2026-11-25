@@ -52,6 +52,7 @@
           <option value="hashtable">Hash Table</option>
           <option value="heapviz">Heap (Min / Max)</option>
           <option value="graph">Graph — BFS / DFS</option>
+          <option value="hanoi">Tower of Hanoi</option>
         </optgroup>
       </select>
     </label>
@@ -325,6 +326,32 @@
         <div id="graphQueueOutput" class="graph-queue-output">Queue is empty.</div>
         <div id="graphOrderOutput" class="graph-order-output">No visit order yet — run BFS to walk the graph level by level.</div>
         <ol id="graphLog" class="graph-log"></ol>
+      </div>
+    </div>
+  </div>
+
+  <div id="hanoiPanel" class="hanoi-panel" hidden>
+    <div class="controls">
+      <label>Discs
+        <select id="hanoiDiscsSelect">
+          <option value="3">3 — 7 moves</option>
+          <option value="4" selected>4 — 15 moves</option>
+          <option value="5">5 — 31 moves</option>
+          <option value="6">6 — 63 moves</option>
+        </select>
+      </label>
+      <button id="hanoiSolveBtn" class="primary">▶ Solve</button>
+      <button id="hanoiStepBtn">Step</button>
+      <button id="demoHanoiBtn">▶ Demo</button>
+      <button id="resetHanoiBtn">Reset</button>
+    </div>
+    <div class="hanoi-area">
+      <div id="hanoiStage" class="hanoi-stage"></div>
+      <div class="hanoi-side">
+        <div class="hanoi-stats">Discs <strong id="hanoiDiscs">4</strong> · Moves <strong id="hanoiMoves">0</strong> · Optimal <strong id="hanoiOptimal">15</strong> · Remaining <strong id="hanoiRemaining">15</strong></div>
+        <div id="hanoiStatus" class="hanoi-status">4 discs on peg A — press Solve to watch the optimal 15-move solution, or step through it one move at a time.</div>
+        <div id="hanoiMovesOutput" class="hanoi-moves-output">No moves yet — the tower is still on peg A.</div>
+        <ol id="hanoiLog" class="hanoi-log"></ol>
       </div>
     </div>
   </div>

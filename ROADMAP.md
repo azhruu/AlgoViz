@@ -36,7 +36,7 @@ Tick items off as they land.
 - [x] Graph canvas: DFS traversal animation
 - [x] Dijkstra shortest path on a weighted grid
 - [x] A* pathfinding with draggable walls
-- [ ] Tower of Hanoi animation
+- [x] Tower of Hanoi animation
 - [ ] Recursion tree: Fibonacci call-stack visualizer
 
 ## Polish (ongoing)
