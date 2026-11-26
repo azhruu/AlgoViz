@@ -258,6 +258,22 @@ footer{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px}
 .hanoi-moves-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--accent2);border-radius:10px;font-size:14px;line-height:1.5}
 .hanoi-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
 .hanoi-log li::before{content:"▸ ";color:var(--accent2)}
+.fib-panel{margin-top:20px}
+.fib-area{display:grid;grid-template-columns:1fr;gap:20px;align-items:start;margin-top:16px}
+.fib-stage{display:flex;justify-content:center;align-items:flex-start;min-height:320px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;padding:14px;overflow-x:auto}
+.fib-node-wrap{display:flex;flex-direction:column;align-items:center}
+.fib-node{border:1px solid #26336b;background:var(--panel);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.fib-node.pending{color:var(--muted)}
+.fib-node.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#06121a;border-color:var(--compare);box-shadow:0 0 0 2px var(--compare),0 0 16px rgba(255,209,102,.8)}
+.fib-node.done{color:var(--sorted);border-color:var(--sorted)}
+.fib-children{display:flex;gap:8px;margin-top:10px}
+.fib-side{padding-top:4px}
+.fib-stats{color:var(--muted);font-size:14px}
+.fib-stats strong{color:var(--text);margin-left:6px}
+.fib-status{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-radius:10px;font-size:14px;line-height:1.5}
+.fib-stack-output{margin-top:12px;padding:10px 14px;background:var(--panel2);border:1px solid #1d2749;border-left:3px solid var(--accent2);border-radius:10px;font-size:14px;line-height:1.5}
+.fib-log{list-style:none;margin:12px 0 0;padding:0;color:var(--muted);font-size:14px;line-height:1.7}
+.fib-log li::before{content:"▸ ";color:var(--accent2)}
 .dijkstra-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;max-width:660px;margin:0 auto}
 .grid-cell{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bar);border-radius:6px;font-weight:700;font-size:15px;cursor:pointer;min-width:0;user-select:none;-webkit-user-select:none}
 .grid-cell .cell-weight{font-size:15px}

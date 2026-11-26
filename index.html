@@ -54,6 +54,9 @@
           <option value="graph">Graph — BFS / DFS</option>
           <option value="hanoi">Tower of Hanoi</option>
         </optgroup>
+        <optgroup label="Recursion">
+          <option value="fibonacci">Fibonacci Recursion Tree</option>
+        </optgroup>
       </select>
     </label>
     <label id="targetLabel" hidden>Target
@@ -356,6 +359,35 @@
     </div>
   </div>
 
+  <div id="fibPanel" class="fib-panel" hidden>
+    <div class="controls">
+      <label>n — Fibonacci number
+        <select id="fibNSelect">
+          <option value="2">2 — 3 calls</option>
+          <option value="3">3 — 5 calls</option>
+          <option value="4">4 — 9 calls</option>
+          <option value="5">5 — 15 calls</option>
+          <option value="6" selected>6 — 25 calls</option>
+          <option value="7">7 — 41 calls</option>
+          <option value="8">8 — 67 calls</option>
+        </select>
+      </label>
+      <button id="fibRunBtn" class="primary">▶ Run</button>
+      <button id="fibStepBtn">Step</button>
+      <button id="demoFibBtn">▶ Demo</button>
+      <button id="resetFibBtn">Reset</button>
+    </div>
+    <div class="fib-area">
+      <div id="fibStage" class="fib-stage"></div>
+      <div class="fib-side">
+        <div class="fib-stats">n <strong id="fibN">6</strong> · fib(n) <strong id="fibResult">—</strong> · Calls <strong id="fibCalls">0 / 50</strong> · Depth <strong id="fibMaxDepth">0</strong> · Stack depth <strong id="fibStackDepth">0</strong></div>
+        <div id="fibStatus" class="fib-status">fib(6) — 25 calls in the tree, 6 levels deep. Press Run to watch the calls unfold, or step through them one at a time.</div>
+        <div id="fibStackOutput" class="fib-stack-output">Call stack is empty — no call is running.</div>
+        <ol id="fibLog" class="fib-log"></ol>
+      </div>
+    </div>
+  </div>
+
   <div id="raceResult" class="race-result" hidden></div>
   <div id="customError" class="custom-error" hidden></div>
 
@@ -390,6 +422,7 @@
     <div class="card"><h3>Graphs &amp; Pathfinding</h3><p>BFS and DFS are live — watch a queue walk an 8-node graph level by level, or a stack dive deep down one branch, with the visit order and the queue / stack shown live. Dijkstra is live too, on a 12×7 weighted grid: it settles the cheapest cell first and traces the lowest-cost route from S to T. A* is live on the same grid, guided by f = g + h (Manhattan distance) so it usually settles fewer cells for the same cheapest route — and both searches let you drag across cells to paint walls, or drag over a wall to erase it, with a fresh grid on demand.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Linked Lists &amp; Stacks</h3><p>Pointer-level animations for the classic linear structures — a linked list with head, tail and NULL pointers, a doubly linked list you can walk forward from the head or backward from the tail, plus live stack and queue panels.</p><span class="tag live">Live</span></div>
     <div class="card"><h3>Hashing</h3><p>Hash functions, collisions and chaining — made visible: keys hash into 8 buckets with h(key) = key mod 8, and keys that collide chain up in the same bucket, with a running collision count and load factor.</p><span class="tag live">Live</span></div>
+    <div class="card"><h3>Recursion</h3><p>Tower of Hanoi, solved by the recursion itself — and a Fibonacci call tree that grows one frame at a time, so you can watch the stack deepen, values bubble back up, and the same small subproblems get solved over and over again.</p><span class="tag live">Live</span></div>
   </div>
 </section>
 

@@ -4839,3 +4839,311 @@ function initHanoiViz() {
     log: $("hanoiLog"),
   });
 }
+
+const FIB_INFO = {
+  complexity: "O(2\u207f)",
+  cases: {
+    best: "O(2\u207f) \u2014 every call still splits in two; there is no cheap case",
+    average: "O(2\u207f) \u2014 fib(n) makes about 2\u207f calls, most of them repeated work",
+    worst: "O(2\u207f) \u2014 the same subproblems are solved again and again: fib(6) calls fib(2) five times",
+    note: "The call tree grows one level per recursive call and doubles roughly every level \u2014 that is why fib(6) needs 25 calls for a one-digit answer, and why memoization (remembering each fib(k) once) drops the whole thing to O(n).",
+  },
+  pseudocode:
+`fib(n)                  <- the nth Fibonacci number
+  if n <= 1             <- base case: fib(0) = 0, fib(1) = 1
+    return n
+  return fib(n - 1)     <- solve the smaller problem first
+       + fib(n - 2)     <- then the one before it`,
+};
+
+const FIB_MIN_N = 2;
+const FIB_MAX_N = 8;
+const FIB_DEFAULT_N = 6;
+const FIB_LOG_LIMIT = 8;
+const FIB_STEP_MS = 500;
+
+/* One node of the call tree: { id, n, value, depth, children }.
+   Pure \u2014 no DOM \u2014 so it can be tested on its own. The tree is built
+   eagerly (the value of every call is known up front); the visualizer
+   reveals it one event at a time. */
+let fibNextId = 0;
+function fibCallTree(n, depth) {
+  depth = depth || 0;
+  const node = { id: fibNextId++, n, value: 0, depth, children: [] };
+  if (n <= 1) {
+    node.value = n;
+    return node;
+  }
+  node.children = [fibCallTree(n - 1, depth + 1), fibCallTree(n - 2, depth + 1)];
+  node.value = node.children[0].value + node.children[1].value;
+  return node;
+}
+
+/* The playback script for a tree: a "call" event when a frame is
+   entered, then the events of its children, then a "return" event
+   carrying the value back up. Pure \u2014 no DOM. */
+function fibEvents(root) {
+  const events = [];
+  (function walk(node) {
+    events.push({ type: "call", node });
+    node.children.forEach(walk);
+    events.push({ type: "return", node });
+  })(root);
+  return events;
+}
+
+/* Counts the calls in a tree (every node is one call of fib). */
+function fibCallCount(root) {
+  let count = 1;
+  root.children.forEach((child) => { count += fibCallCount(child); });
+  return count;
+}
+
+/* els: { stage, nSelect, runBtn, stepBtn, demoBtn, resetBtn,
+          n, result, calls, maxDepth, stackDepth, status, stackOutput, log }
+   \u2014 plain DOM elements. The factory keeps no other state, so a node
+   test can drive it with stub elements. */
+function createFibViz(els) {
+  let targetN = FIB_DEFAULT_N;
+  let root = null;
+  let events = [];
+  let eventIndex = 0;
+  let running = false;
+  let timer = null;
+  const state = new Map();   // node id -> "pending" | "active" | "done"
+  const stack = [];          // node ids currently on the call stack
+
+  function totalCalls() { return root ? fibCallCount(root) : 0; }
+
+  function findNode(node, id) {
+    if (!node) return null;
+    if (node.id === id) return node;
+    for (const child of node.children) {
+      const found = findNode(child, id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function finished() { return eventIndex >= events.length; }
+
+  function renderNode(node) {
+    const wrap = document.createElement("div");
+    wrap.className = "fib-node-wrap";
+    const box = document.createElement("div");
+    box.className = "fib-node " + (state.get(node.id) || "pending");
+    box.textContent = state.get(node.id) === "done"
+      ? `fib(${node.n}) = ${node.value}`
+      : `fib(${node.n})`;
+    wrap.appendChild(box);
+    if (node.children.length > 0) {
+      const kids = document.createElement("div");
+      kids.className = "fib-children";
+      node.children.forEach((child) => kids.appendChild(renderNode(child)));
+      wrap.appendChild(kids);
+    }
+    return wrap;
+  }
+
+  function render() {
+    els.stage.innerHTML = "";
+    if (root) els.stage.appendChild(renderNode(root));
+    els.n.textContent = String(targetN);
+    els.result.textContent = finished() ? String(root.value) : "\u2014";
+    els.calls.textContent = `${eventIndex} / ${events.length}`;
+    els.maxDepth.textContent = String(root ? rootMaxDepth(root) : 0);
+    els.stackDepth.textContent = String(stack.length);
+  }
+
+  function rootMaxDepth(node) {
+    if (node.children.length === 0) return node.depth;
+    return Math.max(...node.children.map(rootMaxDepth));
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function log(message) {
+    const entry = document.createElement("li");
+    entry.textContent = message;
+    els.log.insertBefore(entry, els.log.firstChild);
+    while (els.log.children.length > FIB_LOG_LIMIT)
+      els.log.removeChild(els.log.lastChild);
+  }
+
+  /* The live call stack, top frame first \u2014 the frames that have been
+     entered but not yet returned. */
+  function updateStackOutput() {
+    if (stack.length === 0) {
+      els.stackOutput.textContent = "Call stack is empty \u2014 no call is running.";
+      return;
+    }
+    const frames = stack.slice().reverse().map((id) => {
+      const node = findNode(root, id);
+      return `fib(${node.n})`;
+    });
+    els.stackOutput.textContent = `Call stack (top first): ${frames.join(" \u2192 ")}`;
+  }
+
+  function setButtonsDisabled(disabled) {
+    [els.runBtn, els.stepBtn, els.demoBtn, els.resetBtn, els.nSelect]
+      .forEach((b) => { b.disabled = disabled; });
+  }
+
+  function applyEvent(event) {
+    if (event.type === "call") {
+      state.set(event.node.id, "active");
+      stack.push(event.node.id);
+      log(`call fib(${event.node.n})`
+        + (event.node.children.length === 0 ? " \u2014 base case" : ""));
+      setStatus(event.node.children.length === 0
+        ? `Base case \u2014 fib(${event.node.n}) returns ${event.node.value} straight away.`
+        : `Calling fib(${event.node.n}) \u2014 it needs fib(${event.node.n - 1}) and fib(${event.node.n - 2}).`);
+    } else {
+      state.set(event.node.id, "done");
+      stack.pop();
+      log(`return fib(${event.node.n}) = ${event.node.value}`);
+      setStatus(`fib(${event.node.n}) returns ${event.node.value}`
+        + (event.node === root
+          ? ` \u2014 done: fib(${targetN}) = ${root.value} in ${totalCalls()} calls.`
+          : ` \u2014 back to its caller.`));
+    }
+    eventIndex++;
+    render();
+    updateStackOutput();
+    if (finished()) {
+      stopRun();
+      setStatus(`Done \u2713 \u2014 fib(${targetN}) = ${root.value}, worked out in `
+        + `${totalCalls()} calls over ${events.length} steps. `
+        + `Notice how often the small values repeat \u2014 that repeated work is what memoization removes.`);
+    }
+  }
+
+  /* One event at a time, on demand. Disabled while Run is playing. */
+  function step() {
+    if (running) return false;
+    if (finished()) {
+      setStatus(`Already finished \u2014 fib(${targetN}) = ${root.value} in ${totalCalls()} calls. `
+        + `Reset to watch it again, or pick a different n.`);
+      return false;
+    }
+    applyEvent(events[eventIndex]);
+    return true;
+  }
+
+  function stopRun() {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    running = false;
+    setButtonsDisabled(false);
+  }
+
+  /* Plays the call tree, one event per beat. */
+  function run() {
+    if (running) return false;
+    if (finished()) {
+      setStatus(`Already finished \u2014 fib(${targetN}) = ${root.value} in ${totalCalls()} calls. `
+        + `Reset to watch it again, or pick a different n.`);
+      return false;
+    }
+    running = true;
+    setButtonsDisabled(true);
+    els.runBtn.disabled = false;   // Run doubles as stop while playing
+    setStatus(`Running \u2014 fib(${targetN}), ${totalCalls()} calls to make\u2026`);
+    const tick = () => {
+      if (!running) return;
+      applyEvent(events[eventIndex]);
+      if (!finished()) timer = setTimeout(tick, FIB_STEP_MS);
+    };
+    timer = setTimeout(tick, FIB_STEP_MS);
+    return true;
+  }
+
+  /* Rebuilds the tree for the current n and clears the log. */
+  function reset() {
+    stopRun();
+    fibNextId = 0;
+    root = fibCallTree(targetN);
+    events = fibEvents(root);
+    eventIndex = 0;
+    state.clear();
+    stack.length = 0;
+    (function mark(node) {
+      state.set(node.id, "pending");
+      node.children.forEach(mark);
+    })(root);
+    render();
+    updateStackOutput();
+    els.log.innerHTML = "";
+    setStatus(`fib(${targetN}) \u2014 ${totalCalls()} calls in the tree, ${rootMaxDepth(root)} levels deep. `
+      + `Press Run to watch the calls unfold, or step through them one at a time.`);
+  }
+
+  function setN(n) {
+    if (!Number.isInteger(n) || n < FIB_MIN_N || n > FIB_MAX_N) {
+      setStatus(`Pick n from ${FIB_MIN_N} to ${FIB_MAX_N}.`);
+      return false;
+    }
+    targetN = n;
+    reset();
+    return true;
+  }
+
+  /* The scripted demo: n = 5, the smallest tree that still shows a
+     repeated subproblem (fib(2) is called three times), so it finishes
+     quickly and the waste is visible. */
+  function demo() {
+    if (running) return false;
+    els.nSelect.value = "5";
+    targetN = 5;
+    reset();
+    return run();
+  }
+
+  els.runBtn.addEventListener("click", () => {
+    if (running) stopRun();
+    else run();
+  });
+  els.stepBtn.addEventListener("click", () => step());
+  els.demoBtn.addEventListener("click", () => demo());
+  els.resetBtn.addEventListener("click", () => reset());
+  els.nSelect.addEventListener("change", (e) =>
+    setN(parseInt(e.target.value, 10)));
+
+  reset();
+  return {
+    run, step, demo, reset, setN, stopRun,
+    get n() { return targetN; },
+    get result() { return root.value; },
+    get totalCalls() { return totalCalls(); },
+    get events() { return events.length; },
+    get finished() { return finished(); },
+    get running() { return running; },
+    get stackDepth() { return stack.length; },
+    info: FIB_INFO,
+  };
+}
+
+/* Wires the Fibonacci recursion-tree panel in index.html; called once from app.js. */
+function initFibViz() {
+  const $ = (id) => document.getElementById(id);
+  return createFibViz({
+    stage: $("fibStage"),
+    nSelect: $("fibNSelect"),
+    runBtn: $("fibRunBtn"),
+    stepBtn: $("fibStepBtn"),
+    demoBtn: $("demoFibBtn"),
+    resetBtn: $("resetFibBtn"),
+    n: $("fibN"),
+    result: $("fibResult"),
+    calls: $("fibCalls"),
+    maxDepth: $("fibMaxDepth"),
+    stackDepth: $("fibStackDepth"),
+    status: $("fibStatus"),
+    stackOutput: $("fibStackOutput"),
+    log: $("fibLog"),
+  });
+}

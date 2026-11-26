@@ -37,7 +37,7 @@ Tick items off as they land.
 - [x] Dijkstra shortest path on a weighted grid
 - [x] A* pathfinding with draggable walls
 - [x] Tower of Hanoi animation
-- [ ] Recursion tree: Fibonacci call-stack visualizer
+- [x] Recursion tree: Fibonacci call-stack visualizer
 
 ## Polish (ongoing)
 - [ ] GitHub Pages deployment + live demo link in README

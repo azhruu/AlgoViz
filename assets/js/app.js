@@ -10,6 +10,7 @@ const ALGO_NAMES = {
   doublylinkedlist: "Doubly Linked List", bst: "Binary Search Tree",
   avl: "AVL Tree", hashtable: "Hash Table", heapviz: "Heap",
   graph: "Graph — BFS / DFS / Dijkstra / A*", hanoi: "Tower of Hanoi",
+  fibonacci: "Fibonacci Recursion Tree",
 };
 
 const player = new Player($("stage"), {
@@ -39,6 +40,7 @@ const hashViz = initHashViz();
 const heapViz = initHeapViz();
 const graphViz = initGraphViz();
 const hanoiViz = initHanoiViz();
+const fibViz = initFibViz();
 /* Switching BFS / DFS swaps the pseudocode and case notes to match
    the selected traversal — but only while the graph panel is showing. */
 graphViz.onModeChange = () => {
@@ -186,7 +188,8 @@ function build() {
   const isHeap = algo === "heapviz";
   const isGraph = algo === "graph";
   const isHanoi = algo === "hanoi";
-  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap || isGraph || isHanoi;
+  const isFib = algo === "fibonacci";
+  const isStructure = isStack || isQueue || isLinkedList || isDoublyLinkedList || isBst || isAvl || isHash || isHeap || isGraph || isHanoi || isFib;
   if ((isSearch || isStructure) && raceMode) {
     raceMode = false;
     $("raceToggle").checked = false;
@@ -204,6 +207,7 @@ function build() {
   $("heapPanel").hidden = !isHeap;
   $("graphPanel").hidden = !isGraph;
   $("hanoiPanel").hidden = !isHanoi;
+  $("fibPanel").hidden = !isFib;
   $("stagesWrap").hidden = isStructure;
   $("statsA").hidden = isStructure;
   $("sizeLabel").hidden = isStructure;
@@ -354,6 +358,21 @@ function build() {
     player.stop();
     playerB.stop();
     hanoiViz.reset();
+    return;
+  }
+
+  if (isFib) {
+    pseudoLines = FIB_INFO.pseudocode.split("\n");
+    $("pseudocode").textContent = FIB_INFO.pseudocode;
+    renderCaseNotes($("caseNotes"), FIB_INFO.cases);
+    raceDeclared = false;
+    $("raceResult").hidden = true;
+    $("raceResult").textContent = "";
+    $("stageWrapA").classList.remove("winner");
+    $("stageWrapB").classList.remove("winner");
+    player.stop();
+    playerB.stop();
+    fibViz.reset();
     return;
   }
 
