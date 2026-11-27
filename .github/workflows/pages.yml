@@ -1,0 +1,46 @@
+# Deploy AlgoViz to GitHub Pages.
+#
+# Static site, zero dependencies: the repo root (index.html + assets/)
+# is the whole site. Deploys on every push to main, and can also be
+# run by hand from the Actions tab.
+#
+# One-time setup in the repo (Settings > Pages > Build and deployment):
+# pick "GitHub Actions" as the source. After that, every push to main
+# redeploys automatically and the site is live at
+# https://azhruu.github.io/AlgoViz/
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# Allow only one Pages deployment at a time; a newer push cancels
+# a deployment that is still queued, but never one already running.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

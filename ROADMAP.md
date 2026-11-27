@@ -40,7 +40,7 @@ Tick items off as they land.
 - [x] Recursion tree: Fibonacci call-stack visualizer
 
 ## Polish (ongoing)
-- [ ] GitHub Pages deployment + live demo link in README
+- [x] GitHub Pages deployment + live demo link in README
 - [ ] Screenshots / GIFs in README
 - [ ] Mobile layout pass
 - [ ] Keyboard shortcuts (space = play/pause)

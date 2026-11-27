@@ -5,6 +5,8 @@
 ![Status](https://img.shields.io/badge/status-actively%20building-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+🔗 **Live demo:** https://azhruu.github.io/AlgoViz/ — deployed automatically from `main` via GitHub Pages on every push (one-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions).
+
 ## Why this project
 
 Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus into interactive animations: press play and watch bubble sort bubble, binary search halve, and Dijkstra flood a grid. Every visualizer shows real comparison/swap counts next to the Big-O, so the theory and the behaviour stay connected.
