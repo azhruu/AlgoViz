@@ -41,7 +41,7 @@ Tick items off as they land.
 
 ## Polish (ongoing)
 - [x] GitHub Pages deployment + live demo link in README
-- [ ] Screenshots / GIFs in README
+- [x] Screenshots / GIFs in README
 - [ ] Mobile layout pass
 - [ ] Keyboard shortcuts (space = play/pause)
 - [ ] Complexity comparison table page

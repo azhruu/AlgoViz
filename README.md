@@ -7,6 +7,20 @@
 
 🔗 **Live demo:** https://azhruu.github.io/AlgoViz/ — deployed automatically from `main` via GitHub Pages on every push (one-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions).
 
+## Screenshots
+
+Bubble sort mid-run, with live step / comparison counts and synced pseudocode:
+
+![Bubble sort mid-run](assets/screenshots/sorting-bubble.png)
+
+Binary search tree built by the scripted demo — root labelled, size / height / root stats live below:
+
+![Binary search tree](assets/screenshots/bst.png)
+
+Dijkstra settling the cheapest cell first on the 12×7 weighted grid:
+
+![Dijkstra shortest path](assets/screenshots/dijkstra.png)
+
 ## Why this project
 
 Algorithms click when you can *see* them. AlgoViz turns the classic DSA syllabus into interactive animations: press play and watch bubble sort bubble, binary search halve, and Dijkstra flood a grid. Every visualizer shows real comparison/swap counts next to the Big-O, so the theory and the behaviour stay connected.
